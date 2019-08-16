@@ -1,0 +1,13 @@
+version: '2.1'
+
+services:
+
+  test:
+    build: .
+    volumes:
+      - .:/usr/src
+    depends_on:
+      - ch
+
+  ch:
+    image: yandex/clickhouse-server:19
