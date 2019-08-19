@@ -67,11 +67,14 @@ def execute_defaults(query):
     return query
 
 def _execute_default_attr(query, param, attr_name):
+    # XXX Use _process_executesingle_defaults and _process_executemany_defaults
+    # method of ExecutionContext? Or get_insert_default and get_update_default?
+    # Created from dialect.execution_ctx_cls
     for col in query.table.columns:
         attr = getattr(col, attr_name)
         if attr and param.get(col.name) is None:
             if attr.is_sequence:
-                param[col.name] = func.nextval(attr.name)
+                param[col.name] = sa.func.nextval(attr.name)
             elif attr.is_scalar:
                 param[col.name] = attr.arg
             elif attr.is_callable:
