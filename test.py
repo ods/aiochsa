@@ -114,6 +114,7 @@ class ChClientSa(ChClient):
 
     async def _execute(self, query: str, *args):
         query, args = compile_query(query, args)
+        print('_execute', query, args)
         async for rec in super()._execute(query, *args):
             yield rec
 
@@ -138,9 +139,18 @@ async def main():
         )
         await client.execute(query)
 
-        rows = await client.fetch(
-            test_table.select()
+        test_alias = test_table.alias()
+        query = (
+            sa.select(test_table.c)
+                .select_from(
+                    test_table.join(
+                        test_alias,
+                        test_table.c.id == test_alias.c.id,
+                    )
+                )
         )
+        print(query)
+        rows = await client.fetch(query)
         for row in rows:
             print(dict(row))
 
