@@ -4,9 +4,6 @@ import asyncio
 from datetime import datetime
 from decimal import Decimal
 import re
-import sys
-
-sys.modules['aiochclient._types'] = None # Temporary disable speedup
 
 from aiochclient import ChClient, ChClientError
 from aiohttp import ClientSession

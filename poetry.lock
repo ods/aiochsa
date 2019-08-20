@@ -10,7 +10,7 @@ version = "1.1.4"
 aiohttp = ">=3.0.1"
 
 [package.source]
-reference = "2187e030eaa34b862223a4cd907a5bd7874a2d2c"
+reference = "96421e9e407c6cffe305e832c6639114c79a21e5"
 type = "git"
 url = "https://github.com/ods/aiochclient.git"
 [[package]]
