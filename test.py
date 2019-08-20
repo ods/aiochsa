@@ -7,12 +7,12 @@ import re
 
 from aiochclient import ChClient, ChClientError
 from aiohttp import ClientSession
+from clickhouse_sqlalchemy.drivers.http.base import dialect
+from clickhouse_sqlalchemy.drivers.http.escaper import Escaper
 import sqlalchemy as sa
 from sqlalchemy.sql import ClauseElement
 from sqlalchemy.sql.dml import Insert, Update
 from sqlalchemy.sql.ddl import DDLElement
-from sqlalchemy_clickhouse.base import dialect
-from sqlalchemy_clickhouse.connector import _escaper
 
 
 TEST_CREATE_DDL = '''\
@@ -47,6 +47,7 @@ RE_INSERT_VALUES = re.compile(
 )
 
 _dialect = dialect()
+_escaper = Escaper()
 
 
 def execute_defaults(query):
@@ -88,7 +89,7 @@ def compile_query(query, args):
     elif isinstance(query, DDLElement):
         compiled = query.compile(dialect=_dialect)
         assert not args
-        return compiled.string % _escaper.escape_args(compiled.params), []
+        return compiled.string % _escaper.escape(compiled.params), []
     elif isinstance(query, ClauseElement):
         query = execute_defaults(query)
         compiled = query.compile(dialect=_dialect)
@@ -97,14 +98,14 @@ def compile_query(query, args):
             q_prefix = m.group(1) % ()
             q_values = m.group(2).rstrip()
             values_list = [
-                q_values % _escaper.escape_args(parameters)
+                q_values % _escaper.escape(parameters)
                 for parameters in args or [compiled.params]
             ]
             query = '{} {};'.format(q_prefix, ','.join(values_list))
             return query, []
         else:
             assert not args
-            query = compiled.string % _escaper.escape_args(compiled.params)
+            query = compiled.string % _escaper.escape(compiled.params)
             return query, []
     else:
         assert False, type(query)

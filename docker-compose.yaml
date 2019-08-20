@@ -6,6 +6,7 @@ services:
     build: .
     volumes:
       - .:/usr/src
+      #- ../clickhouse-sqlalchemy.git/clickhouse_sqlalchemy:/usr/src/clickhouse_sqlalchemy
     depends_on:
       - ch
 
