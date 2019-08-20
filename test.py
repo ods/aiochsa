@@ -19,9 +19,9 @@ TEST_CREATE_DDL = '''\
 CREATE TABLE test
 (
     id UInt64,
-    name String
-    -- timestamp DateTime,
-    -- amount Decimal64(9)
+    name String,
+    timestamp DateTime,
+    amount Decimal64(9)
 )
 ENGINE = MergeTree()
 ORDER BY id
@@ -34,8 +34,8 @@ test_table = sa.Table(
     'test', sa.MetaData(),
     sa.Column('id', sa.Integer),
     sa.Column('name', sa.String),
-    #sa.Column('timestamp', sa.DateTime),
-    #sa.Column('amount', sa.DECIMAL),
+    sa.Column('timestamp', sa.DateTime),
+    sa.Column('amount', sa.DECIMAL),
 )
 
 
@@ -134,8 +134,8 @@ async def main():
                 .values(
                     id=1,
                     name='test',
-                    #timestamp=datetime.utcnow(),
-                    #amount=Decimal('1.23'),
+                    timestamp=datetime.utcnow(),
+                    amount=Decimal('1.23'),
                 )
         )
         await client.execute(query)
