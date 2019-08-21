@@ -19,6 +19,7 @@ TEST_CREATE_DDL = '''\
 CREATE TABLE test
 (
     id UInt64,
+    enum Enum8(''=0, 'ONE'=1, 'TWO'=2),
     name String,
     timestamp DateTime,
     amount Decimal64(9)
@@ -33,6 +34,7 @@ TEST_DROP_DDL = 'DROP TABLE test'
 test_table = sa.Table(
     'test', sa.MetaData(),
     sa.Column('id', sa.Integer),
+    sa.Column('enum', sa.Enum),
     sa.Column('name', sa.String),
     sa.Column('timestamp', sa.DateTime),
     sa.Column('amount', sa.DECIMAL),
@@ -133,6 +135,7 @@ async def main():
             test_table.insert()
                 .values(
                     id=1,
+                    enum='ONE',
                     name='test',
                     timestamp=datetime.utcnow(),
                     amount=Decimal('1.23'),
