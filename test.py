@@ -8,7 +8,7 @@ from aiochclient import ChClientError
 from aiohttp import ClientSession
 import sqlalchemy as sa
 
-from aiochsa import ChClientSa
+from aiochsa import connect
 
 
 TEST_CREATE_DDL = '''\
@@ -38,8 +38,7 @@ test_table = sa.Table(
 
 
 async def main():
-    async with ClientSession() as s:
-        client = ChClientSa(s, url='http://ch:8123')
+    async with connect('clickhouse://ch') as client:
         try:
             await client.execute(TEST_DROP_DDL)
         except ChClientError:

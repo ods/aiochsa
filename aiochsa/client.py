@@ -90,3 +90,10 @@ class ChClientSa(ChClient):
         print('_execute', query, args)
         async for rec in super()._execute(query, *args):
             yield rec
+
+    # Allow using client as context manager when returned from `Pool.acquire()`
+    async def __aenter__(self):
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        pass
