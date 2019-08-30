@@ -12,4 +12,4 @@ services:
       - ch
 
   ch:
-    image: yandex/clickhouse-server:19
+    image: yandex/clickhouse-server
