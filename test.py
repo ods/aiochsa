@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 import asyncio
-from datetime import datetime
+from datetime import datetime, timedelta
 from decimal import Decimal
 import re
 
@@ -36,8 +36,8 @@ test_table = sa.Table(
     sa.Column('id', sa.Integer),
     sa.Column('enum', sa.Enum),
     sa.Column('name', sa.String),
-    sa.Column('timestamp', sa.DateTime),
-    sa.Column('amount', sa.DECIMAL),
+    sa.Column('timestamp', sa.DateTime, default=datetime.utcnow),
+    sa.Column('amount', sa.DECIMAL, default=Decimal(0)),
 )
 
 
@@ -52,7 +52,7 @@ _dialect = dialect()
 _escaper = Escaper()
 
 
-def execute_defaults(query):
+def execute_defaults(query, args):
     if isinstance(query, Insert):
         attr_name = 'default'
     elif isinstance(query, Update):
@@ -60,13 +60,14 @@ def execute_defaults(query):
     else:
         return query
 
-    # query.parameters could be a list in a multi row insert
-    if isinstance(query.parameters, list):
-        for param in query.parameters:
-            _execute_default_attr(query, param, attr_name)
-    else:
-        query.parameters = query.parameters or {}
-        _execute_default_attr(query, query.parameters, attr_name)
+    if not args:
+        # query.parameters could be a list in a multi row insert
+        args = query.parameters
+        if not isinstance(query.parameters, list):
+            args = [args]
+
+    for params in args:
+        _execute_default_attr(query, params, attr_name)
     return query
 
 def _execute_default_attr(query, param, attr_name):
@@ -93,15 +94,17 @@ def compile_query(query, args):
         assert not args
         return compiled.string % _escaper.escape(compiled.params), []
     elif isinstance(query, ClauseElement):
-        query = execute_defaults(query)
+        query = execute_defaults(query, args)
         compiled = query.compile(dialect=_dialect)
+        # TODO Analyse source query instead of compiled string
         m = RE_INSERT_VALUES.match(compiled.string)
         if m:
             q_prefix = m.group(1) % ()
             q_values = m.group(2).rstrip()
+            print(args or [compiled.params])
             values_list = [
                 q_values % _escaper.escape(parameters)
-                for parameters in args or [compiled.params]
+                for parameters in (args or [compiled.params])
             ]
             query = '{} {};'.format(q_prefix, ','.join(values_list))
             return query, []
@@ -157,6 +160,18 @@ async def main():
         rows = await client.fetch(query)
         for row in rows:
             print(dict(row))
+
+        await client.execute(
+            test_table.insert(),
+            *[
+                {
+                    'id': i+1,
+                    'enum': 'TWO' if i % 2 else 'ONE',
+                    'name': f'test{i}',
+                }
+                for i in range(10)
+            ]
+        )
 
 
 if __name__ == '__main__':
