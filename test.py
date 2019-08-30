@@ -165,13 +165,33 @@ async def main():
             test_table.insert(),
             *[
                 {
-                    'id': i+1,
+                    'id': 10 + i,
                     'enum': 'TWO' if i % 2 else 'ONE',
                     'name': f'test{i}',
                 }
                 for i in range(10)
             ]
         )
+
+        await client.execute(
+            test_table.insert()
+                .values([
+                    {
+                        'id': 20 + i,
+                        'enum': 'TWO' if i % 2 else 'ONE',
+                        'name': f'test{i}',
+                    }
+                    for i in range(10)
+                ])
+        )
+
+        rows = await client.fetch(
+            test_table.select()
+                .where(test_table.c.enum == 'ONE')
+                .order_by(test_table.c.id)
+        )
+        for row in rows:
+            print(dict(row))
 
 
 if __name__ == '__main__':
