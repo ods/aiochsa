@@ -3,7 +3,7 @@ import re
 from aiochclient import ChClient
 from clickhouse_sqlalchemy.drivers.http.base import dialect
 from clickhouse_sqlalchemy.drivers.http.escaper import Escaper
-from sqlalchemy.sql import ClauseElement
+from sqlalchemy.sql import func, ClauseElement
 from sqlalchemy.sql.dml import Insert, Update
 from sqlalchemy.sql.ddl import DDLElement
 
@@ -45,7 +45,7 @@ def _execute_default_attr(query, param, attr_name):
         attr = getattr(col, attr_name)
         if attr and param.get(col.name) is None:
             if attr.is_sequence:
-                param[col.name] = sa.func.nextval(attr.name)
+                param[col.name] = func.nextval(attr.name)
             elif attr.is_scalar:
                 param[col.name] = attr.arg
             elif attr.is_callable:
