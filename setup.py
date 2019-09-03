@@ -1,9 +1,5 @@
+from setuptools import setup
 import sys
-
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
 
 
 needs_pytest = {'pytest', 'test', 'ptr'}.intersection(sys.argv)
