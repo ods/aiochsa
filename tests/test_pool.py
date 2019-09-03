@@ -1,6 +1,6 @@
 import pytest
 
-from aiochsa.pool import dsn_to_params
+from aiochsa.pool import dsn_to_params, create_pool
 
 
 
@@ -22,6 +22,12 @@ def test_dsn_wrong_scheme():
 def test_dsn_default_port():
     params = dsn_to_params('clickhouse://pet')
     assert params['url'] == 'http://pet:8123'
+
+
+async def test_create_pool_close(dsn):
+    pool = await create_pool(dsn)
+    await pool.execute('SELECT 1')
+    await pool.close()
 
 
 async def test_pool_async_with(pool):

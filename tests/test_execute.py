@@ -8,6 +8,15 @@ async def test_ddl(conn, test_table):
     await conn.execute(sa.DDL(f'DROP TABLE {test_table.name}'))
 
 
+async def test_func(conn):
+    ts_before = datetime.utcnow().replace(microsecond=0)
+    now = await conn.fetchval(
+        sa.select([sa.func.now()])
+    )
+    ts_after = datetime.utcnow().replace(microsecond=0)
+    assert ts_before <= now <= ts_after
+
+
 async def test_simple_round(conn, test_table):
     now = datetime.utcnow().replace(microsecond=0)
     values = {
