@@ -53,7 +53,6 @@ def _execute_default_attr(query, param, attr_name):
 
 
 def compile_query(query, args):
-    print([query, args])
     if isinstance(query, str):
         return query, args
     elif isinstance(query, DDLElement):
@@ -68,7 +67,6 @@ def compile_query(query, args):
         if m:
             q_prefix = m.group(1) % ()
             q_values = m.group(2).rstrip()
-            print(args or [compiled.params])
             values_list = [
                 q_values % _escaper.escape(parameters)
                 for parameters in (args or [compiled.params])
@@ -87,7 +85,6 @@ class ChClientSa(ChClient):
 
     async def _execute(self, query: str, *args):
         query, args = compile_query(query, args)
-        print('_execute', query, args)
         async for rec in super()._execute(query, *args):
             yield rec
 
