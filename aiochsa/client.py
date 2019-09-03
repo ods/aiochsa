@@ -67,11 +67,11 @@ def compile_query(query, args):
             query = '{} {};'.format(q_prefix, ','.join(values_list))
             return query, []
         else:
-            assert not args
-            if compiled.params is None:
+            params = args[0] if args else compiled.params
+            if params is None:
                 query = compiled.string
             else:
-                query = compiled.string % _escaper.escape(compiled.params)
+                query = compiled.string % _escaper.escape(params)
             return query, []
     else: # pragma: no cover
         assert False, type(query)

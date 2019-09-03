@@ -114,3 +114,37 @@ async def test_join(conn, test_table):
             )
     )
     assert {tuple(row.values()) for row in rows} == {(1, 1), (2, 2), (3, 3)}
+
+
+async def test_select_params(conn, test_table):
+    await conn.execute(
+        test_table.insert(),
+        *[
+            {'id': i + 1, 'name': f'test{i + 1}'}
+            for i in range(3)
+        ],
+    )
+
+    rows = await conn.fetch(
+        sa.select([test_table.c.id])
+            .where(test_table.c.id >= sa.bindparam('min_id'))
+            .params(min_id=2)
+    )
+    assert [row['id'] for row in rows] == [2, 3]
+
+
+async def test_select_params_args(conn, test_table):
+    await conn.execute(
+        test_table.insert(),
+        *[
+            {'id': i + 1, 'name': f'test{i + 1}'}
+            for i in range(3)
+        ],
+    )
+
+    rows = await conn.fetch(
+        sa.select([test_table.c.id])
+            .where(test_table.c.id >= sa.bindparam('min_id')),
+        {'min_id': 2},
+    )
+    assert [row['id'] for row in rows] == [2, 3]
