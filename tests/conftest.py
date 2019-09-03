@@ -23,6 +23,12 @@ def dsn(docker_services):
 
 
 @pytest.fixture
+async def pool(dsn):
+    async with aiochsa.create_pool(dsn) as pool:
+        yield pool
+
+
+@pytest.fixture
 async def conn(dsn):
     async with aiochsa.connect(dsn) as conn:
         yield conn

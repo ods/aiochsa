@@ -36,7 +36,8 @@ class Pool:
         await self._session.close()
 
     def __await__(self):
-        # For compartibility with asyncpg
+        # For compartibility with asyncpg (`await create_pool(...)`)
+        yield from []
         return self
 
     async def __aenter__(self):
@@ -45,7 +46,7 @@ class Pool:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    async def acquire(self):
+    def acquire(self):
         return self._client
 
     async def release(self, conn):

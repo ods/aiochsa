@@ -4,8 +4,7 @@ from aiochclient import ChClient
 from clickhouse_sqlalchemy.drivers.http.base import dialect
 from clickhouse_sqlalchemy.drivers.http.escaper import Escaper
 from sqlalchemy.sql import func, ClauseElement
-from sqlalchemy.sql.dml import Insert, Update
-from sqlalchemy.sql.ddl import DDLElement
+from sqlalchemy.sql.dml import Insert
 
 
 RE_INSERT_VALUES = re.compile(
@@ -20,11 +19,8 @@ _escaper = Escaper()
 
 
 def execute_defaults(query, args):
-    if isinstance(query, Insert):
-        attr_name = 'default'
-    elif isinstance(query, Update):
-        attr_name = 'onupdate'
-    else:
+    # Clickhouse doesn't support updates, so we don't need to honor `onupdate`
+    if not isinstance(query, Insert):
         return query
 
     if not args:
@@ -34,31 +30,28 @@ def execute_defaults(query, args):
             args = [args]
 
     for params in args:
-        _execute_default_attr(query, params, attr_name)
+        _execute_default_attr(query, params)
     return query
 
-def _execute_default_attr(query, param, attr_name):
+def _execute_default_attr(query, params):
     # XXX Use _process_executesingle_defaults and _process_executemany_defaults
-    # method of ExecutionContext? Or get_insert_default and get_update_default?
+    # method of ExecutionContext? Or get_insert_default?
     # Created from dialect.execution_ctx_cls
     for col in query.table.columns:
-        attr = getattr(col, attr_name)
-        if attr and param.get(col.name) is None:
-            if attr.is_sequence:
-                param[col.name] = func.nextval(attr.name)
-            elif attr.is_scalar:
-                param[col.name] = attr.arg
+        attr = col.default
+        if attr and col.name not in params:
+            # Clickhouse doesn't support sequences, so we skip them
+            if attr.is_scalar:
+                params[col.name] = attr.arg
             elif attr.is_callable:
-                param[col.name] = attr.arg({})
+                params[col.name] = attr.arg({})
+            else: # pragma: no cover
+                assert False, repr(attr)
 
 
 def compile_query(query, args):
     if isinstance(query, str):
         return query, args
-    elif isinstance(query, DDLElement):
-        compiled = query.compile(dialect=_dialect)
-        assert not args
-        return compiled.string % _escaper.escape(compiled.params), []
     elif isinstance(query, ClauseElement):
         query = execute_defaults(query, args)
         compiled = query.compile(dialect=_dialect)
@@ -75,9 +68,12 @@ def compile_query(query, args):
             return query, []
         else:
             assert not args
-            query = compiled.string % _escaper.escape(compiled.params)
+            if compiled.params is None:
+                query = compiled.string
+            else:
+                query = compiled.string % _escaper.escape(compiled.params)
             return query, []
-    else:
+    else: # pragma: no cover
         assert False, type(query)
 
 
@@ -87,6 +83,11 @@ class ChClientSa(ChClient):
         query, args = compile_query(query, args)
         async for rec in super()._execute(query, *args):
             yield rec
+
+    def __await__(self):
+        # For compartibility with asyncpg (`await pool.acquire(...)`)
+        yield from []
+        return self
 
     # Allow using client as context manager when returned from `Pool.acquire()`
     async def __aenter__(self):
