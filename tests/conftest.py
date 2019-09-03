@@ -54,7 +54,7 @@ async def test_table(conn):
     return sa.Table(
         'test', sa.MetaData(),
         sa.Column('id', sa.Integer),
-        sa.Column('enum', sa.Enum),
+        sa.Column('enum', sa.Enum, default=''),
         sa.Column('name', sa.String),
         sa.Column('timestamp', sa.DateTime, default=datetime.utcnow),
         sa.Column('amount', sa.DECIMAL, default=Decimal(0)),
