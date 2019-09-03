@@ -6,7 +6,7 @@ from aiohttp.client import ClientSession
 from .client import ChClientSa
 
 
-def dsn_to_connect_url(dsn):
+def dsn_to_params(dsn):
     parsed = urlsplit(dsn)
 
     if parsed.scheme != 'clickhouse':
@@ -14,14 +14,22 @@ def dsn_to_connect_url(dsn):
             f'Expecting "clickhouse" scheme in DSN, got {parsed.scheme}'
         )
 
-    # Set default port. Keep username/password unchanged if any.
-    netloc = parsed.netloc
-    if parsed.port is None:
-        netloc += ':8123'
+    hostname = parsed.hostname or '127.0.0.1'
+    port = parsed.port or 8123
+    netloc = f'{hostname}:{port}'
+
+    database = parsed.path.lstrip('/')
+    if not database:
+        database = 'default'
 
     # XXX Parse parameters from query?
 
-    return urlunsplit(('http', netloc, parsed.path, parsed.query, ''))
+    return {
+        'url': urlunsplit(('http', netloc, '', '', '')),
+        'database': database,
+        'user': parsed.username,
+        'password': parsed.password,
+    }
 
 
 class Pool:
@@ -29,8 +37,8 @@ class Pool:
     def __init__(self, dsn):
         # TODO Session and connector parameters
         self._session = ClientSession()
-        url = dsn_to_connect_url(dsn)
-        self._client = ChClientSa(self._session, url=url)
+        params = dsn_to_params(dsn)
+        self._client = ChClientSa(self._session, **params)
 
     async def close(self):
         await self._session.close()

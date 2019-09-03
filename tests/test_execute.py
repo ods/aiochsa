@@ -4,17 +4,6 @@ from decimal import Decimal
 import sqlalchemy as sa
 
 
-async def test_pool_with(pool):
-    async with pool.acquire() as conn:
-        await conn.execute('SELECT 1')
-
-
-async def test_pool_acquire_release(pool):
-    conn = await pool.acquire()
-    await conn.execute('SELECT 1')
-    await pool.release(conn)
-
-
 async def test_ddl(conn, test_table):
     await conn.execute(sa.DDL(f'DROP TABLE {test_table.name}'))
 
