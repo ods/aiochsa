@@ -1,7 +1,9 @@
 aiochsa
 =======
 
-An experimental wrapper around aiochclient to use it with SQLAlchemy
+An experimental wrapper around aiochclient_ to use it with SQLAlchemy
+
+.. _aiochclient: https://github.com/maximdanilchenko/aiochclient
 
 Example
 -------
