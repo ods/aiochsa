@@ -5,7 +5,6 @@ from datetime import datetime, timedelta
 from decimal import Decimal
 
 from aiochclient import ChClientError
-from aiohttp import ClientSession
 import sqlalchemy as sa
 
 from aiochsa import connect
