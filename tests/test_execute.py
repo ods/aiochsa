@@ -10,11 +10,25 @@ async def test_ddl(conn, test_table):
 
 async def test_func(conn):
     ts_before = datetime.utcnow().replace(microsecond=0)
-    now = await conn.fetchval(
-        sa.select([sa.func.now()])
-    )
+    now = await conn.fetchval(sa.func.now())
     ts_after = datetime.utcnow().replace(microsecond=0)
     assert ts_before <= now <= ts_after
+
+
+async def test_func_params(conn):
+    result = await conn.fetchval(
+        sa.func.plus(sa.bindparam('a'), sa.bindparam('b'))
+            .params({'a': 12, 'b': 23})
+    )
+    assert result == 35
+
+
+async def test_func_params_args(conn):
+    result = await conn.fetchval(
+        sa.func.plus(sa.bindparam('a'), sa.bindparam('b')),
+        {'a': 12, 'b': 23},
+    )
+    assert result == 35
 
 
 async def test_simple_round(conn, test_table):
