@@ -1,11 +1,25 @@
 from datetime import datetime
 from decimal import Decimal
 
+import pytest
 import sqlalchemy as sa
 
 
 async def test_ddl(conn, test_table):
     await conn.execute(sa.DDL(f'DROP TABLE {test_table.name}'))
+
+
+@pytest.mark.xfail(
+    raises=TypeError,
+    # Is the game worth the candle? For it compilation can't be separated from
+    # execution.
+    reason='Execution of default is not supported yet',
+)
+async def test_execute_default(conn, test_table):
+    ts_before = datetime.utcnow().replace(microsecond=0)
+    now = await conn.fetchval(test_table.c.timestamp.default)
+    ts_after = datetime.utcnow().replace(microsecond=0)
+    assert ts_before <= now <= ts_after
 
 
 async def test_func(conn):
