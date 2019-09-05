@@ -1,5 +1,6 @@
 from datetime import datetime
 from decimal import Decimal
+from enum import Enum
 
 import pytest
 import sqlalchemy as sa
@@ -63,6 +64,44 @@ async def test_simple_round(conn, test_table):
     row = await conn.fetchrow(test_table.select())
     assert rows == [row]
     assert dict(row) == values
+
+
+async def test_non_ascii(conn, test_table):
+    sample = 'зразок'
+    await conn.execute(
+        test_table.insert()
+            .values(id=1, name=sample)
+    )
+    name = await conn.fetchval(
+        sa.select([test_table.c.name])
+            .where(test_table.c.id == 1)
+    )
+    assert name == sample
+
+
+async def test_enum(conn, test_table):
+
+    class EnumType(str, Enum):
+        ONE = 'ONE'
+        TWO = 'TWO'
+
+    await conn.execute(
+        test_table.insert()
+            .values(id=1, enum=EnumType.ONE)
+    )
+    value = await conn.fetchval(
+        sa.select([test_table.c.enum])
+            .where(test_table.c.id == 1)
+    )
+    assert value == EnumType.ONE
+
+
+async def test_unsupported_type(conn):
+    with pytest.raises(TypeError):
+        await conn.fetchval(
+            sa.select([sa.bindparam('a')])
+                .params(a=...)
+        )
 
 
 async def test_defaults(conn, test_table):

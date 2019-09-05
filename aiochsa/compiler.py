@@ -7,9 +7,9 @@ from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import Insert
 from sqlalchemy.sql.functions import FunctionElement
 
+from .escaper import escape
 
 _dialect = dialect()
-_escaper = Escaper()
 
 
 def _execute_clauseelement(elem, multiparams):
@@ -62,7 +62,11 @@ def _execute_context(dialect, constructor, statement, parameters, *args):
     db_api_conn = SimpleNamespace(cursor=lambda: None)
     context = constructor(dialect, conn, db_api_conn, *args)
     assert len(context.parameters) == 1
-    return context.statement % _escaper.escape(context.parameters[0])
+    escaped = {
+        name: escape(value)
+        for name, value in context.parameters[0].items()
+    }
+    return context.statement % escaped
 
 
 def compile_statement(statement, args):
