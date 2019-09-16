@@ -1,6 +1,8 @@
 import re
 
 
+# Based on `getExceptionMessage()`:
+# https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/Exception.cpp#L261
 _match_exc_message = re.compile(
     r'^Code: (?P<code>\d+), '
         r'e\.displayText\(\) = (?P<display_text>.+?)'
@@ -21,8 +23,8 @@ class DBException(Exception):
         return f'[Code={self.code}] {self.display_text}'
 
     @classmethod
-    def from_response(cls, data):
-        m = _match_exc_message(data)
+    def from_message(cls, exc_message):
+        m = _match_exc_message(exc_message)
         if m:
             return cls(
                 code=int(m.group('code')),

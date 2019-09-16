@@ -21,13 +21,10 @@ class ChClientSa(ChClient):
 
         async with self._session.post(
             self.url, params=self.params, data=data
-        ) as resp:  # type: client.ClientResponse
+        ) as resp:
             if resp.status != 200:
-                # TODO Parse code and display test (and stack trace?):
-                # https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/Exception.cpp#L261
-                raise DBException.from_response(
-                    (await resp.read()).decode(errors='replace')
-                )
+                body = await resp.read()
+                raise DBException.from_message(body.decode(errors='replace'))
             if query_type == QueryTypes.FETCH:
                 rf = RecordsFabric(
                     names=await resp.content.readline(),
