@@ -4,6 +4,7 @@ from aiochclient.client import ChClient, ChClientError, QueryTypes
 from aiochclient.records import Record, RecordsFabric # TODO To be replaced
 
 from .compiler import compile_statement
+from .exc import DBException
 
 
 class ChClientSa(ChClient):
@@ -24,7 +25,9 @@ class ChClientSa(ChClient):
             if resp.status != 200:
                 # TODO Parse code and display test (and stack trace?):
                 # https://github.com/yandex/ClickHouse/blob/master/dbms/src/Common/Exception.cpp#L261
-                raise ChClientError((await resp.read()).decode(errors='replace'))
+                raise DBException.from_response(
+                    (await resp.read()).decode(errors='replace')
+                )
             if query_type == QueryTypes.FETCH:
                 rf = RecordsFabric(
                     names=await resp.content.readline(),

@@ -34,10 +34,10 @@ def dsn_to_params(dsn):
 
 class Pool:
 
-    def __init__(self, dsn, client_class=ChClientSa):
+    def __init__(self, dsn, client_class=ChClientSa, **params):
         # TODO Session and connector parameters
         self._session = ClientSession()
-        params = dsn_to_params(dsn)
+        params.update(dsn_to_params(dsn))
         self._client = client_class(self._session, **params)
 
     async def close(self):

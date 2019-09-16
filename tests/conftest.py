@@ -7,6 +7,7 @@ import pytest
 import sqlalchemy as sa
 
 import aiochsa
+from aiochsa import error_codes
 
 
 def pytest_collection_modifyitems(items):
@@ -54,9 +55,12 @@ TEST_DROP_DDL = 'DROP TABLE test'
 async def test_table(conn):
     try:
         await conn.execute(TEST_DROP_DDL)
-    except ChClientError:
-        pass
+    except aiochsa.DBException as exc:
+        if exc.code != error_codes.UNKNOWN_TABLE:
+            raise
+
     await conn.execute(TEST_CREATE_DDL)
+
     return sa.Table(
         'test', sa.MetaData(),
         sa.Column('id', sa.Integer),
