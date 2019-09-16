@@ -1,13 +1,13 @@
 from types import SimpleNamespace
 
 from clickhouse_sqlalchemy.drivers.http.base import dialect
-from clickhouse_sqlalchemy.drivers.http.escaper import Escaper
 from sqlalchemy.sql import func, ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import Insert
 from sqlalchemy.sql.functions import FunctionElement
 
 from .escaper import escape
+
 
 _dialect = dialect()
 

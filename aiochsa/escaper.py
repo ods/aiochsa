@@ -8,7 +8,7 @@ def escape(value):
     try:
         value = PY_TYPES_MAPPING[value_type](value)
     except KeyError:
-        # Fallback to slower method.  And even this won't work for virtual
+        # Fallback to slower way.  And even this won't work for virtual
         # subclasses.
         for subclass in value_type.mro()[1:]:
             if subclass in PY_TYPES_MAPPING:
