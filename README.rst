@@ -5,6 +5,7 @@ An experimental wrapper around aiochclient_ to use it with SQLAlchemy
 
 .. _aiochclient: https://github.com/maximdanilchenko/aiochclient
 
+
 Example
 -------
 
@@ -29,3 +30,9 @@ Example
         rows = await conn.fetch(
             table.select()
         )
+
+
+Change log
+----------
+
+See `CHANGELOG <https://github.com/ods/aiochsa/blob/master/CHANGELOG.rst>`_.
