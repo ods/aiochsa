@@ -63,7 +63,7 @@ async def test_simple_round(conn, test_table):
     rows = await conn.fetch(test_table.select())
     row = await conn.fetchrow(test_table.select())
     assert rows == [row]
-    assert dict(row) == values
+    assert row == values
 
 
 async def test_non_ascii(conn, test_table):
@@ -113,7 +113,7 @@ async def test_defaults(conn, test_table):
     }
     await conn.execute(
         test_table.insert()
-            .values(values.copy())
+            .values(values)
     )
     ts_after = datetime.utcnow().replace(microsecond=0)
 
@@ -135,7 +135,7 @@ async def test_insert_multiple(conn, test_table):
     ]
     await conn.execute(
         test_table.insert()
-            .values([d.copy() for d in values])
+            .values(values)
     )
 
     rows = await conn.fetch(
@@ -143,7 +143,7 @@ async def test_insert_multiple(conn, test_table):
             .where(test_table.c.enum == 'ONE')
             .order_by(test_table.c.id.desc())
     )
-    assert [row[0] for row in rows] == [5, 3, 1]
+    assert [item_id for (item_id,) in rows] == [5, 3, 1]
 
 
 async def test_insert_multiple_args(conn, test_table):
@@ -152,13 +152,13 @@ async def test_insert_multiple_args(conn, test_table):
         for i in range(3)
     ]
     await conn.execute(
-        test_table.insert(), *[d.copy() for d in values],
+        test_table.insert(), *values,
     )
 
     rows = await conn.fetch(
         sa.select([test_table.c.id, test_table.c.name])
     )
-    assert [dict(row) for row in rows] == values
+    assert rows == values
 
 
 async def test_join(conn, test_table):
@@ -180,7 +180,7 @@ async def test_join(conn, test_table):
                 )
             )
     )
-    assert {tuple(row.values()) for row in rows} == {(1, 1), (2, 2), (3, 3)}
+    assert {tuple(row) for row in rows} == {(1, 1), (2, 2), (3, 3)}
 
 
 async def test_select_params(conn, test_table):
@@ -197,7 +197,7 @@ async def test_select_params(conn, test_table):
             .where(test_table.c.id >= sa.bindparam('min_id'))
             .params(min_id=2)
     )
-    assert [row['id'] for row in rows] == [2, 3]
+    assert [item_id for (item_id,) in rows] == [2, 3]
 
 
 async def test_select_params_args(conn, test_table):
@@ -214,4 +214,4 @@ async def test_select_params_args(conn, test_table):
             .where(test_table.c.id >= sa.bindparam('min_id')),
         {'min_id': 2},
     )
-    assert [row['id'] for row in rows] == [2, 3]
+    assert [item_id for (item_id,) in rows] == [2, 3]
