@@ -1,10 +1,10 @@
 from typing import AsyncIterable
 
 from aiochclient.client import ChClient, ChClientError, QueryTypes
-from aiochclient.records import Record, RecordsFabric # TODO To be replaced
 
 from .compiler import compile_statement
 from .exc import DBException
+from .record import Record, RecordFabric
 
 
 class ChClientSa(ChClient):
@@ -16,7 +16,7 @@ class ChClientSa(ChClient):
         query_type = self.query_type(query)
 
         if query_type == QueryTypes.FETCH:
-            query += " FORMAT TSVWithNamesAndTypes"
+            query += ' FORMAT TSVWithNamesAndTypes'
         data = query.encode()
 
         async with self._session.post(
@@ -25,13 +25,14 @@ class ChClientSa(ChClient):
             if resp.status != 200:
                 body = await resp.read()
                 raise DBException.from_message(body.decode(errors='replace'))
+
             if query_type == QueryTypes.FETCH:
-                rf = RecordsFabric(
-                    names=await resp.content.readline(),
-                    tps=await resp.content.readline(),
+                record_fabric = RecordFabric(
+                    names_line=await resp.content.readline(),
+                    types_line=await resp.content.readline(),
                 )
                 async for line in resp.content:
-                    yield rf.new(line)
+                    yield record_fabric.parse_row(line)
 
     def __await__(self):
         # For compartibility with asyncpg (`await pool.acquire(...)`)

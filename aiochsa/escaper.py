@@ -16,4 +16,4 @@ def escape(value):
                 break
         else:
             raise TypeError(f'Unsupported type {value_type}')
-    return value.decode('utf-8')
+    return value.decode()
