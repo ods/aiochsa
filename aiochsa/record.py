@@ -4,7 +4,7 @@ from aiochclient.types import what_py_converter
 
 class Record(Mapping):
 
-    __slots__ = ['_names', '_values']
+    __slots__ = ('_names', '_values')
 
     def __init__(self, names, values):
         self._names = names

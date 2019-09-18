@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import Enum
 
@@ -215,3 +215,18 @@ async def test_select_params_args(conn, test_table):
         {'min_id': 2},
     )
     assert [item_id for (item_id,) in rows] == [2, 3]
+
+
+async def test_nested_structures(conn):
+    value = await conn.fetchval(
+        r"SELECT ("
+            r"1, "
+            r"(2, NULL, 'a\nb\tc\0d\'', ['a', '\'']),"
+            r"1.23, toDecimal32('1.23', 2), toDate('2000-01-01')"
+        r")"
+    )
+    assert value == (
+        1,
+        (2, None, 'a\nb\tc\0d\'', ['a', '\'']),
+        1.23, Decimal('1.23'), date(2000, 1, 1)
+    )
