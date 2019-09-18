@@ -1,0 +1,10 @@
+start: value
+
+value: tuple | array | NULL | STRING | NUMBER
+tuple: "(" value (SEP value)* ")"
+array: "[" value (SEP value)* "]"
+
+NULL: "NULL"
+STRING: /'([^'\\]|\\.)*'/
+NUMBER: /nan|-?(inf|\d+(\.\d+)?(e-?\d+)?)/
+SEP: ","

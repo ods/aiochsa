@@ -1,0 +1,12 @@
+start: type
+
+type: tuple | array | nullable | simple_type
+tuple: "Tuple(" type (SEP type)* ")"
+array: "Array(" type ")"
+nullable: "Nullable(" type ")"
+simple_type: TYPE_NAME [params]
+params: "(" PARAM (SEP PARAM)* ")"
+
+TYPE_NAME: /\w+/
+PARAM: /\d+/
+SEP: /,\s*/
