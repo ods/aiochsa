@@ -1,12 +1,16 @@
 start: type
 
-type: tuple | array | nullable | simple_type
+type: tuple | array | enum | nullable | simple_type
 tuple: "Tuple(" type (SEP type)* ")"
 array: "Array(" type ")"
+enum: /Enum\d+/ enum_params
 nullable: "Nullable(" type ")"
 simple_type: TYPE_NAME [params]
+enum_params: "(" PARAM_NAME EQ PARAM (SEP PARAM_NAME EQ PARAM)* ")"
 params: "(" PARAM (SEP PARAM)* ")"
 
 TYPE_NAME: /\w+/
+PARAM_NAME: /'([^\\']|\\.)*'/
 PARAM: /\d+/
+EQ: /\s*=\s*/
 SEP: /,\s*/
