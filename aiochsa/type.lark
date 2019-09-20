@@ -1,17 +1,19 @@
 start: type
 
 type: tuple | array | enum | nullable | low_cardinality | simple_type
-tuple: "Tuple(" type (SEP type)* ")"
+tuple: "Tuple(" type (_SEP type)* ")"
 array: "Array(" type ")"
-enum: /Enum\d+/ enum_params
+enum: ENUM_NAME enum_params
 nullable: "Nullable(" type ")"
 low_cardinality: "LowCardinality(" type ")"
-simple_type: TYPE_NAME [params]
-enum_params: "(" PARAM_NAME EQ PARAM (SEP PARAM_NAME EQ PARAM)* ")"
-params: "(" PARAM (SEP PARAM)* ")"
+simple_type: type_name [params]
+type_name: NAME
+enum_params: "(" QUOTED_STRING _EQ INT (_SEP QUOTED_STRING _EQ INT)* ")"
+params: "(" INT (_SEP INT)* ")"
 
-TYPE_NAME: /\w+/
-PARAM_NAME: /'([^\\']|\\.)*'/
-PARAM: /\d+/
-EQ: /\s*=\s*/
-SEP: /,\s*/
+NAME: /\w+/
+ENUM_NAME: /Enum\d+/
+QUOTED_STRING: /'([^\\']|\\.)*'/
+INT: /\d+/
+_EQ: /\s*=\s*/
+_SEP: /,\s*/
