@@ -112,7 +112,7 @@ class TupleType(BaseType):
 
     py_type = tuple
 
-    def __init__(self, item_types):
+    def __init__(self, *item_types):
         self._item_types = item_types
 
     @classmethod
@@ -225,6 +225,9 @@ class TypeRegistry:
         for py_type in py_types:
             assert isinstance(py_type, type)
             self._encoders[py_type] = conv_class.encode
+
+    def __getitem__(self, ch_type_name):
+        return self._types[ch_type_name]
 
     def encode(self, value):
         py_type = type(value)
