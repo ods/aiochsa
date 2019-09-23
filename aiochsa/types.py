@@ -1,7 +1,7 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import (
-    Any, Callable, Generic, Iterable, List, Optional, Type, TypeVar,
+    Any, Callable, Generic, Iterable, List, Optional, Type, TypeVar, Union,
 )
 from uuid import UUID
 
@@ -154,8 +154,7 @@ class NullableType(BaseType):
 
     @classmethod
     def encode(cls, value: PyType, encode=None) -> str:
-        # It must be never called
-        assert False  # pragma: nocover
+        raise RuntimeError('Must be never called')  # pragma: nocover
 
     def from_json(self, value: JsonType) -> Any:
         if value is None:
@@ -171,8 +170,7 @@ class LowCardinalityType(BaseType):
 
     @classmethod
     def encode(cls, value: PyType, encode=None) -> str:
-        # It must be never called
-        assert False  # pragma: nocover
+        raise RuntimeError('Must be never called')  # pragma: nocover
 
     def from_json(self, value: JsonType) -> Any:
         return self._item_type.from_json(value)
@@ -214,7 +212,7 @@ class TypeRegistry:
         self,
         conv_class: Type[BaseType],
         ch_types: Iterable[str],
-        py_types: Iterable[type] = (),
+        py_types: Union[type, Iterable[type]] = (),
     ):
         for ch_type in ch_types:
             self._types[ch_type] = conv_class
