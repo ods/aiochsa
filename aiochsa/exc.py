@@ -32,4 +32,4 @@ class DBException(Exception):
                 stack_trace=m.group('stack_trace'),
             )
         else: # pragma: nocover
-            return cls(code=None, display_text=data)
+            return cls(code=None, display_text=exc_message)
