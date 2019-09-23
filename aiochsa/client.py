@@ -1,6 +1,6 @@
 from typing import AsyncIterable
 
-from aiochclient.client import ChClient, ChClientError, QueryTypes
+from aiochclient.client import ChClient
 
 from .compiler import compile_statement
 from .exc import DBException
@@ -13,24 +13,23 @@ class ChClientSa(ChClient):
         query = compile_statement(statement, args)
 
         # The rest is a modified copy of `ChClient._execute()`
-        query_type = self.query_type(query)
-
-        if query_type == QueryTypes.FETCH:
-            query += ' FORMAT TSVWithNamesAndTypes'
         data = query.encode()
 
         async with self._session.post(
-            self.url, params=self.params, data=data
+            self.url,
+            params={'default_format': 'TSVWithNamesAndTypes', **self.params},
+            data=data,
         ) as resp:
             if resp.status != 200:
                 body = await resp.read()
                 raise DBException.from_message(body.decode(errors='replace'))
 
-            if query_type == QueryTypes.FETCH:
-                record_fabric = RecordFabric(
-                    names_line=await resp.content.readline(),
-                    types_line=await resp.content.readline(),
-                )
+            if resp.content_type == 'text/tab-separated-values':
+                names_line = await resp.content.readline()
+                if not names_line:  # It's INSERT
+                    return
+                types_line = await resp.content.readline()
+                record_fabric = RecordFabric(names_line, types_line)
                 async for line in resp.content:
                     yield record_fabric.parse_row(line)
 
