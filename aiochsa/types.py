@@ -143,9 +143,7 @@ class ArrayType(BaseType):
         )
 
     def from_json(self, value: List[JsonType]) -> tuple:
-        return tuple(
-            self._item_type.from_json(v) for v in value
-        )
+        return [self._item_type.from_json(v) for v in value]
 
 
 class NullableType(BaseType):
