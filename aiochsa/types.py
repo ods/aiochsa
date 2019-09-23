@@ -142,7 +142,7 @@ class ArrayType(BaseType):
             ','.join(encode(v) for v in value)
         )
 
-    def from_json(self, value: List[JsonType]) -> tuple:
+    def from_json(self, value: List[JsonType]) -> list:
         return [self._item_type.from_json(v) for v in value]
 
 
