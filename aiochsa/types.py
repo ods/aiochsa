@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from ipaddress import IPv4Address, IPv6Address
 from typing import (
     Any, Callable, Generic, Iterable, List, Optional, Type, TypeVar, Union,
 )
@@ -97,6 +98,14 @@ class UUIDType(BaseType):
         return f"'{value}'"
 
 
+class IPv4Type(BaseType):
+    py_type = IPv4Address
+
+
+class IPv6Type(BaseType):
+    py_type = IPv6Address
+
+
 class NothingType(BaseType):
     py_type = NoneType
 
@@ -192,6 +201,8 @@ DEFAULT_CONVERTES = [
     (DateType, ['Date'], date),
     (DateTimeType, ['DateTime'], datetime),
     (UUIDType, ['UUID'], UUID),
+    (IPv4Type, ['IPv4'], IPv4Address),
+    (IPv6Type, ['IPv6'], IPv6Address),
     (NothingType, ['Nothing'], NoneType),
     (TupleType, ['Tuple'], tuple),
     (ArrayType, ['Array'], list),

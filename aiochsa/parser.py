@@ -26,3 +26,21 @@ class TypeTransformer(Transformer):
 def parse_type(types: TypeRegistry, type_str):
     tree = type_parser.parse(type_str)
     return TypeTransformer(types).transform(tree)
+
+
+if __name__ == '__main__':
+    # TODO Covert this to proper tests
+    tree = type_parser.parse(
+        r"Tuple("
+            r"UInt8, "
+            r"Tuple(UInt8, Nullable(Nothing), String, Array(String)), "
+            r"Decimal(9, 2), "
+            r"Date, "
+            r"IPv4, IPv6,"
+            r"Nullable(Enum8('' = 0, 'a' = 1, '\t\n\0\\\'' = 2))"
+        r")",
+    )
+
+    print(tree.pretty())
+
+    t = TypeTransformer(TypeRegistry()).transform(tree)
