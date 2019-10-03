@@ -1,18 +1,15 @@
 from types import SimpleNamespace
 
-from clickhouse_sqlalchemy.drivers.http.base import dialect
 from sqlalchemy.sql import func, ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import Insert
 from sqlalchemy.sql.functions import FunctionElement
 
 
-_dialect = dialect()
-
-
 class Compiler:
 
-    def __init__(self, encode):
+    def __init__(self, dialect, encode):
+        self._dialect = dialect
         self._encode = encode
 
     def _execute_clauseelement(self, elem, multiparams):
@@ -29,11 +26,11 @@ class Compiler:
             else:
                 elem = elem.params(multiparams)
         compiled_sql = elem.compile(
-            dialect=_dialect,
+            dialect=self._dialect,
         )
         return self._execute_context(
-            _dialect,
-            _dialect.execution_ctx_cls._init_compiled,
+            self._dialect,
+            self._dialect.execution_ctx_cls._init_compiled,
             compiled_sql,
             (),
             compiled_sql,
@@ -47,10 +44,10 @@ class Compiler:
     def _execute_ddl(self, ddl, multiparams):
         # Modeled after `sqlalchemy.engine.base.Connection._execute_ddl` (event
         # signaling is removed).
-        compiled = ddl.compile(dialect=_dialect)
+        compiled = ddl.compile(dialect=self._dialect)
         return self._execute_context(
-            _dialect,
-            _dialect.execution_ctx_cls._init_ddl,
+            self._dialect,
+            self._dialect.execution_ctx_cls._init_ddl,
             compiled,
             None,
             compiled,

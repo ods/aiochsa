@@ -1,6 +1,7 @@
 from typing import AsyncIterable
 
 from aiochclient.client import ChClient
+from clickhouse_sqlalchemy.drivers.http.base import ClickHouseDialect_http
 
 from .compiler import Compiler
 from .exc import DBException
@@ -10,12 +11,14 @@ from .types import TypeRegistry
 
 class ChClientSa(ChClient):
 
-    def __init__(self, *args, converters=None, **kwargs):
+    def __init__(self, *args, dialect=None, converters=None, **kwargs):
         super().__init__(*args, **kwargs)
+        if dialect is None:
+            dialect = ClickHouseDialect_http()
         if converters is None:
             converters = TypeRegistry()
         self._converters = converters
-        self._compiler = Compiler(encode=converters.encode)
+        self._compiler = Compiler(dialect=dialect, encode=converters.encode)
 
     async def _execute(self, statement: str, *args) -> AsyncIterable[Record]:
         query = self._compiler.compile_statement(statement, args)
