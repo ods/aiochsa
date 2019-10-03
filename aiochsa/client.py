@@ -5,13 +5,17 @@ from aiochclient.client import ChClient
 from .compiler import Compiler
 from .exc import DBException
 from .record import Record, RecordFabric
+from .types import TypeRegistry
 
 
 class ChClientSa(ChClient):
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, converters=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self._compiler = Compiler()
+        if converters is None:
+            converters = TypeRegistry()
+        self._converters = converters
+        self._compiler = Compiler(encode=converters.encode)
 
     async def _execute(self, statement: str, *args) -> AsyncIterable[Record]:
         query = self._compiler.compile_statement(statement, args)

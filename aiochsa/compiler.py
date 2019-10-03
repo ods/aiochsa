@@ -6,15 +6,13 @@ from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import Insert
 from sqlalchemy.sql.functions import FunctionElement
 
-from .escaper import escape
-
 
 _dialect = dialect()
 
 
 class Compiler:
 
-    def __init__(self, encode=escape):
+    def __init__(self, encode):
         self._encode = encode
 
     def _execute_clauseelement(self, elem, multiparams):
