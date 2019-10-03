@@ -2,15 +2,19 @@ from typing import AsyncIterable
 
 from aiochclient.client import ChClient
 
-from .compiler import compile_statement
+from .compiler import Compiler
 from .exc import DBException
 from .record import Record, RecordFabric
 
 
 class ChClientSa(ChClient):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._compiler = Compiler()
+
     async def _execute(self, statement: str, *args) -> AsyncIterable[Record]:
-        query = compile_statement(statement, args)
+        query = self._compiler.compile_statement(statement, args)
 
         # The rest is a modified copy of `ChClient._execute()`
         data = query.encode()
