@@ -5,7 +5,7 @@ from typing import AsyncIterable
 from aiohttp import StreamReader
 from lark import Lark, Transformer, v_args
 
-from .record import Record, RecordFabric
+from .record import Record
 from .types import TypeRegistry
 
 
@@ -49,9 +49,14 @@ async def parse_json_compact(
         type_obj = parse_type(types, column['type'])
         converters.append(type_obj.from_json)
 
-    fabric = RecordFabric(names, converters)
     for row in response['data']:
-        yield fabric.decode_row(row)
+        yield Record(
+            names = names,
+            values = [
+                converter(value)
+                for converter, value in zip(converters, row)
+            ]
+        )
 
 
 if __name__ == '__main__':

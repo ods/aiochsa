@@ -51,19 +51,3 @@ class Record(Mapping):
                 for name, value in self.items()
             )
         )
-
-
-class RecordFabric:
-
-    def __init__(self, names, converters):
-        self._names = names
-        self._converters = converters
-
-    def decode_row(self, row):
-        return Record(
-            names=self._names,
-            values=[
-                converter(value)
-                for converter, value in zip(self._converters, row)
-            ]
-        )
