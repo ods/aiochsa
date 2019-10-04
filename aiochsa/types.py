@@ -131,7 +131,10 @@ class TupleType(BaseType):
         )
 
     def from_json(self, value: List[JsonType]) -> tuple:
-        assert len(self._item_types) == len(value)
+        try:
+            assert len(self._item_types) == len(value)
+        except:
+            breakpoint()
         return tuple(
             t.from_json(v) for t, v in zip(self._item_types, value)
         )

@@ -1,5 +1,4 @@
 from collections.abc import Mapping
-from aiochclient.types import what_py_converter
 
 
 class Record(Mapping):
@@ -56,19 +55,15 @@ class Record(Mapping):
 
 class RecordFabric:
 
-    def __init__(self, names_line, types_line):
-        self._names = names_line.decode().rstrip().split('\t')
-        self._converters = [
-            what_py_converter(type_name)
-            for type_name in types_line.decode().rstrip().split('\t')
-        ]
+    def __init__(self, names, converters):
+        self._names = names
+        self._converters = converters
 
-    def parse_row(self, row_line):
-        row_line = row_line.rstrip(b'\n')
+    def decode_row(self, row):
         return Record(
             names=self._names,
             values=[
                 converter(value)
-                for converter, value in zip(self._converters, row_line.split(b'\t'))
+                for converter, value in zip(self._converters, row)
             ]
         )
