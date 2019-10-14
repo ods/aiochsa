@@ -1,5 +1,5 @@
 import json
-from pathlib import Path
+import pkg_resources
 from typing import AsyncIterable
 
 from aiohttp import StreamReader
@@ -12,8 +12,9 @@ from .types import TypeRegistry
 __all__ = ['parse_type']
 
 
-CUR_DIR = Path(__file__).parent
-type_parser = Lark(open(CUR_DIR / 'type.lark').read())
+type_parser = Lark(
+    pkg_resources.resource_string(__name__, 'type.lark').decode()
+)
 
 
 @v_args(inline=True)
