@@ -10,6 +10,6 @@ NAME: /\w+/
 PARAMS: "(" PARAM (_SEP PARAM)* ")"
 PARAM: [QUOTED_STRING _EQ] INT
 QUOTED_STRING: /'([^\\']|\\.)*'/
-INT: /\d+/
+INT: /-?\d+/
 _EQ: /\s*=\s*/
 _SEP: /,\s*/

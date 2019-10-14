@@ -69,7 +69,7 @@ if __name__ == '__main__':
             r"Decimal(9, 2), "
             r"Date, "
             r"IPv4, IPv6,"
-            r"Nullable(Enum8('' = 0, 'a' = 1, '\t\n\0\\\'' = 2))"
+            r"Nullable(Enum8('' = -128, 'a' = 1, '\t\n\0\\\'' = 2))"
         r")",
     )
 
