@@ -51,6 +51,10 @@ class FloatType(BaseType):
 class DecimalType(BaseType):
     py_type = Decimal
 
+    @classmethod
+    def encode(cls, value: PyType, encode: Callable) -> str:
+        return f"'{value}'"
+
 
 class DateType(BaseType):
     py_type = date
@@ -59,7 +63,9 @@ class DateType(BaseType):
     def encode(cls, value: date, encode=None) -> str:
         return f"'{value.isoformat()}'"
 
-    def from_json(self, value: str) -> date:
+    def from_json(self, value: str) -> Optional[date]:
+        if value == '0000-00-00':
+            return None
         return date.fromisoformat(value)
 
 
@@ -71,7 +77,9 @@ class DateTimeType(BaseType):
         value = value.replace(microsecond=0)
         return f"'{value.isoformat()}'"
 
-    def from_json(self, value: str) -> datetime:
+    def from_json(self, value: str) -> Optional[datetime]:
+        if value == '0000-00-00 00:00:00':
+            return None
         return datetime.fromisoformat(value)
 
 
@@ -131,10 +139,7 @@ class TupleType(BaseType):
         )
 
     def from_json(self, value: List[JsonType]) -> tuple:
-        try:
-            assert len(self._item_types) == len(value)
-        except:
-            breakpoint()
+        assert len(self._item_types) == len(value)
         return tuple(
             t.from_json(v) for t, v in zip(self._item_types, value)
         )
