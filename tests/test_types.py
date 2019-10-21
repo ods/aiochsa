@@ -7,7 +7,7 @@ import sqlalchemy as sa
 from clickhouse_sqlalchemy import types as t
 
 import aiochsa
-from aiochsa.types import TypeRegistry, DateTimeUTCType
+from aiochsa.types import DateTimeUTCType, TypeRegistry
 
 
 def parametrized_id(value):
@@ -83,7 +83,7 @@ async def test_zero_dates(conn, sa_type, value):
 @pytest.fixture
 async def conn_utc(dsn):
     types = TypeRegistry()
-    types.register(DateTimeUTCType, ch_types=['DateTime'], py_types=datetime)
+    types.register(DateTimeUTCType, ['DateTime'], datetime)
     async with aiochsa.connect(dsn, types=types) as conn:
         yield conn
 
