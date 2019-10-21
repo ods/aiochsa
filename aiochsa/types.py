@@ -74,7 +74,7 @@ class DateTimeType(BaseType):
 
     @classmethod
     def encode(cls, value: datetime, encode=None) -> str:
-        value = value.replace(microsecond=0)
+        value = value.replace(tzinfo=None, microsecond=0)
         return f"'{value.isoformat()}'"
 
     def from_json(self, value: str) -> Optional[datetime]:
@@ -91,7 +91,10 @@ class DateTimeUTCType(DateTimeType):
             raise ValueError(
                 'Got naive datetime while timezone-aware is expected'
             )
-        value = value.astimezone(timezone.utc).replace(microsecond=0)
+        value = (
+            value.astimezone(timezone.utc)
+                .replace(tzinfo=None, microsecond=0)
+        )
         return f"'{value.isoformat()}'"
 
     def from_json(self, value: str) -> datetime:
