@@ -1,6 +1,9 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
+from ipaddress import IPv4Address, IPv6Address
 import itertools
+from random import randrange
+import uuid
 
 import pytest
 import sqlalchemy as sa
@@ -15,6 +18,10 @@ def parametrized_id(value):
         # Types without parameters, e.g. `Int32` -> `Int32()`
         value = value()
     return repr(value)
+
+
+MAX_IPV4 = 256**4 - 1
+MAX_IPV6 = 256**16 - 1
 
 
 @pytest.mark.parametrize(
@@ -54,6 +61,10 @@ def parametrized_id(value):
                 datetime(1970, 1, 1, 0, 0, 1),
                 datetime.now().replace(microsecond=0)
             ]),
+
+            (t.UUID, [uuid.uuid4()]),
+            (t.IPv4, map(IPv4Address, [0, MAX_IPV4, randrange(1, MAX_IPV4)])),
+            (t.IPv6, map(IPv6Address, [0, MAX_IPV6, randrange(1, MAX_IPV6)])),
         ]
     ]),
     ids = parametrized_id,
@@ -88,10 +99,14 @@ async def conn_utc(dsn):
         yield conn
 
 
-@pytest.mark.parametrize('value', [
-    datetime(1970, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
-    datetime.utcnow().replace(tzinfo=timezone.utc, microsecond=0),
-])
+@pytest.mark.parametrize(
+    'value',
+    [
+        datetime(1970, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
+        datetime.utcnow().replace(tzinfo=timezone.utc, microsecond=0),
+    ],
+    ids = parametrized_id,
+)
 async def test_datetime_utc(conn_utc, value):
     result = await conn_utc.fetchval(
         sa.func.toDateTime(value)
