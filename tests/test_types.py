@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 from decimal import Decimal
+import enum
 from ipaddress import IPv4Address, IPv6Address
 import itertools
 from random import randrange
@@ -24,6 +25,25 @@ MAX_IPV4 = 256**4 - 1
 MAX_IPV6 = 256**16 - 1
 
 
+class PyEnum(str, enum.Enum):
+    FOO = 'FOO'
+    BAR = 'BAR'
+    BAZ = 'BAZ'
+
+
+# Int version of enum is needed for definition in CAST only.
+
+class CHEnum8(int, enum.Enum):
+    FOO = -128
+    BAR = 0
+    BAZ = 127
+
+class CHEnum16(int, enum.Enum):
+    FOO = -32768
+    BAR = 0
+    BAZ = 32767
+
+
 @pytest.mark.parametrize(
     'sa_type,value',
     itertools.chain(*[
@@ -31,6 +51,9 @@ MAX_IPV6 = 256**16 - 1
         [
             (t.String, ['', '\0', "'", '"', '\\', "\\'", 'зразок']),
             (t.String(16), ['', 'зразок']),
+
+            (t.Enum8(CHEnum8), list(PyEnum)),
+            (t.Enum16(CHEnum16), list(PyEnum)),
 
             (t.Int8, [-128, 0, 127]),
             (t.UInt8, [0, 255]),
@@ -66,7 +89,11 @@ MAX_IPV6 = 256**16 - 1
             (t.IPv4, map(IPv4Address, [0, MAX_IPV4, randrange(1, MAX_IPV4)])),
             (t.IPv6, map(IPv6Address, [0, MAX_IPV6, randrange(1, MAX_IPV6)])),
 
-            (t.Nullable(t.String), [None]),
+            (t.Nullable(t.String), [None, '', 'abc']),
+            (t.LowCardinality(t.String), ['', 'abc']),
+            (t.Array(t.String), [['foo', 'bar']]),
+
+            # TODO Tests for `Tuple`, including deeply nested
         ]
     ]),
     ids = parametrized_id,
@@ -125,6 +152,9 @@ async def test_datetime_utc_pass_naive(conn_utc):
 
 async def test_nothing(conn):
     result = await conn.fetchval(
-        sa.select([None])
+        # Without `bindparam()` the value is handled by SQLAlchemy and isn't
+        # passed through escape
+        sa.select([sa.bindparam('a')])
+            .params(a=None)
     )
     assert result is None

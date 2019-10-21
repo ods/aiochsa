@@ -124,7 +124,8 @@ class NothingType(BaseType):
         return 'NULL'
 
     def from_json(self, value: NoneType) -> None:
-        return None
+        # Actually it's never called
+        return None # pragma: nocover
 
 
 class TupleType(BaseType):
