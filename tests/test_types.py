@@ -65,6 +65,8 @@ MAX_IPV6 = 256**16 - 1
             (t.UUID, [uuid.uuid4()]),
             (t.IPv4, map(IPv4Address, [0, MAX_IPV4, randrange(1, MAX_IPV4)])),
             (t.IPv6, map(IPv6Address, [0, MAX_IPV6, randrange(1, MAX_IPV6)])),
+
+            (t.Nullable(t.String), [None]),
         ]
     ]),
     ids = parametrized_id,
@@ -119,3 +121,10 @@ async def test_datetime_utc_pass_naive(conn_utc):
         await conn_utc.fetchval(
             sa.func.toDateTime(datetime.now())
         )
+
+
+async def test_nothing(conn):
+    result = await conn.fetchval(
+        sa.select([None])
+    )
+    assert result is None
