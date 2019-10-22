@@ -11,7 +11,10 @@ import sqlalchemy as sa
 from clickhouse_sqlalchemy import types as t
 
 import aiochsa
-from aiochsa.types import DateTimeUTCType, TypeRegistry
+from aiochsa.types import (
+    ArrayType, BaseType, DateTimeUTCType, IntType, LowCardinalityType,
+    NullableType, StrType, TupleType, TypeRegistry,
+)
 
 
 def parametrized_id(value):
@@ -91,6 +94,7 @@ class CHEnum16(int, enum.Enum):
 
             (t.Nullable(t.String), [None, '', 'abc']),
             (t.LowCardinality(t.String), ['', 'abc']),
+            (t.LowCardinality(t.Nullable(t.String)), [None, '', 'abc']),
             (t.Array(t.String), [['foo', 'bar']]),
 
             # TODO Tests for `Tuple`, including deeply nested
@@ -171,3 +175,51 @@ async def test_datetime_utc_pass_naive(conn_utc):
         await conn_utc.fetchval(
             sa.func.toDateTime(datetime.now())
         )
+
+
+# Parser tests would be meaningless if something is wrong with `__eq__`, so
+# it's better to insure it works.
+
+def _get_all_subclasses(cls):
+    for subcls in cls.__subclasses__():
+        yield subcls
+        yield from _get_all_subclasses(subcls)
+
+SIMPLE_TYPE_CLASSES = [
+    cls for cls in _get_all_subclasses(BaseType) if not cls.__slots__
+]
+
+
+@pytest.mark.parametrize(
+    'type_class', SIMPLE_TYPE_CLASSES,
+)
+def test_eq_simple(type_class):
+    type_obj = type_class()
+    assert type_obj == type_class()
+    assert all(
+        type_obj != other_type_class()
+        for other_type_class in SIMPLE_TYPE_CLASSES
+        if other_type_class is not type_class
+    )
+
+
+@pytest.mark.parametrize(
+    'type_class', [ArrayType, NullableType, LowCardinalityType],
+)
+def test_eq_wrapping(type_class):
+    type_obj = type_class(StrType())
+    assert type_obj == type_class(StrType())
+
+    assert type_obj != StrType()
+    assert repr(type_obj) != repr(StrType())
+
+    assert type_obj != type_class(IntType())
+    assert repr(type_obj) != repr(type_class(IntType()))
+
+
+def test_eq_tuple():
+    type_obj = TupleType(StrType(), IntType())
+    assert type_obj == TupleType(StrType(), IntType())
+
+    assert type_obj != TupleType(StrType())
+    assert repr(type_obj) != repr(TupleType(StrType()))

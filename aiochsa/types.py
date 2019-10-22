@@ -24,6 +24,21 @@ class BaseType(Generic[PyType, JsonType]):
     def from_json(self, value: JsonType) -> PyType:
         return self.py_type(value)
 
+    def __eq__(self, other):
+        return (
+            type(self) == type(other) and
+            all(
+                getattr(self, slot) == getattr(other, slot)
+                for slot in self.__slots__
+            )
+        )
+
+    def __repr__(self):
+        return '{}({})'.format(
+            type(self).__name__,
+            ', '.join(repr(getattr(self, arg)) for arg in self.__slots__)
+        )
+
 
 class StrType(BaseType):
     py_type = str
