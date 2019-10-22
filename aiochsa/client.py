@@ -1,4 +1,4 @@
-from typing import AsyncIterable
+from typing import AsyncGenerator
 
 from aiochclient.client import ChClient
 from clickhouse_sqlalchemy.drivers.http.base import ClickHouseDialect_http
@@ -22,7 +22,9 @@ class ChClientSa(ChClient):
         self._types = types
         self._compiler = Compiler(dialect=dialect, encode=types.encode)
 
-    async def _execute(self, statement: str, *args) -> AsyncIterable[Record]:
+    async def _execute(
+        self, statement: str, *args,
+    ) -> AsyncGenerator[Record, None]:
         query = self._compiler.compile_statement(statement, args)
 
         # The rest is a modified copy of `ChClient._execute()`
