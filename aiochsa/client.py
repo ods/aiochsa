@@ -14,7 +14,8 @@ class ChClientSa(ChClient):
 
     def __init__(self, *args, dialect=None, types=None, **kwargs):
         super().__init__(*args, **kwargs)
-        if dialect is None:
+        if dialect is None: # pragma: no cover
+            # XXX Do we actualy need the ability to pass custom dialect?
             dialect = ClickHouseDialect_http()
         if types is None:
             types = TypeRegistry()
