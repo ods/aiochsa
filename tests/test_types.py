@@ -98,9 +98,32 @@ class CHEnum16(int, enum.Enum):
     ]),
     ids = parametrized_id,
 )
-async def test_encode_decode_round(conn, sa_type, value):
+async def test_cast_round(conn, sa_type, value):
     result = await conn.fetchval(
         sa.select([sa.func.cast(value, sa_type)])
+    )
+    assert result == value
+
+
+@pytest.mark.parametrize(
+    'value',
+    [
+        '', '\0', "'", '"', '\\', "\\'", 'зразок',
+        -9223372036854775808, 0, 9223372036854775807,
+        0., -0., 1e-307, -1e-307, 1e308, -1e308,
+        [1, 2, 3], ['a', 'b', 'c'],
+        None,
+        ('abc', 123, 2.34, None, [1, 2, 3], (1, ['a', 'b', 'c'])),
+        [('abc', 123), ('bcd', 234)],
+    ],
+    ids = parametrized_id,
+)
+async def test_as_is_round(conn, value):
+    result = await conn.fetchval(
+        # Without `bindparam()` the value is handled by SQLAlchemy as column
+        # expression and not passed through escape
+        sa.select([sa.bindparam('a')])
+            .params(a=value)
     )
     assert result == value
 
@@ -148,13 +171,3 @@ async def test_datetime_utc_pass_naive(conn_utc):
         await conn_utc.fetchval(
             sa.func.toDateTime(datetime.now())
         )
-
-
-async def test_nothing(conn):
-    result = await conn.fetchval(
-        # Without `bindparam()` the value is handled by SQLAlchemy and isn't
-        # passed through escape
-        sa.select([sa.bindparam('a')])
-            .params(a=None)
-    )
-    assert result is None
