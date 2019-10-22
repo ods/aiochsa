@@ -1,6 +1,9 @@
+import asyncio
+from decimal import Decimal
+
 import pytest
 
-from aiochsa.parser import parse_type
+from aiochsa.parser import parse_type, parse_json_compact
 from aiochsa import types as t
 
 
@@ -65,7 +68,29 @@ from aiochsa import types as t
         )
     ],
 )
-async def test_parse_type(type_str, type_obj):
+def test_parse_type(type_str, type_obj):
     types = t.TypeRegistry()
     result = parse_type(types, type_str)
     assert result == type_obj
+
+
+async def test_parse_json_compact_decimal():
+    """ Insure Decimal is parsed without loss of precision """
+    json_data = b'''\
+        {
+            "meta": [
+                {"name": "column", "type": "Decimal(18, 13)"}
+            ],
+            "data": [
+                [1.2345678901230]
+            ]
+        }
+    '''
+    content = asyncio.StreamReader()
+    content.feed_data(json_data)
+    content.feed_eof()
+
+    result = parse_json_compact(t.TypeRegistry(), content)
+    [[value]] = [row async for row in result]
+    assert isinstance(value, Decimal)
+    assert str(value) == '1.2345678901230'

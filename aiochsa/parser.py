@@ -1,8 +1,9 @@
+import asyncio
 import json
 import pkg_resources
-from typing import AsyncIterable
+from typing import AsyncGenerator, Union
 
-from aiohttp import StreamReader
+import aiohttp
 from lark import Lark, Transformer, v_args
 
 from .record import Record
@@ -39,8 +40,9 @@ def parse_type(types: TypeRegistry, type_str):
 
 
 async def parse_json_compact(
-    types: TypeRegistry, content: StreamReader,
-) -> AsyncIterable[Record]:
+    types: TypeRegistry,
+    content: Union[asyncio.StreamReader, aiohttp.StreamReader],
+) -> AsyncGenerator[Record, None]:
     response = json.loads(await content.read(), parse_float=str)
 
     names = []
