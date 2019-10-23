@@ -32,6 +32,24 @@ Example
         )
 
 
+Custom type converters
+----------------------
+
+Here is an example of installing converter for ClickHouse's ``DateTime`` type
+that requires and returns timezone-aware Python's ``datetime`` object and
+stores it as UTC:
+
+.. code-block:: python
+
+    from datetime import datetime
+    import aiochsa
+    from aiochsa.types import DateTimeUTCType, TypeRegistry
+
+    types = TypeRegistry()
+    types.register(DateTimeUTCType, ['DateTime'], datetime)
+    conn = aiochsa.connect(dsn, types=types)
+
+
 Change log
 ----------
 

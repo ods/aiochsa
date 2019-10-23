@@ -1,0 +1,15 @@
+start: _type
+
+_type: composite_type | simple_type
+composite_type: COMPOSITE_NAME "(" _type (_SEP _type)* ")"
+simple_type: NAME [PARAMS]
+params: "(" INT (_SEP INT)* ")"
+
+COMPOSITE_NAME: "Tuple" | "Array" | "Nullable" | "LowCardinality"
+NAME: /\w+/
+PARAMS: "(" PARAM (_SEP PARAM)* ")"
+PARAM: [QUOTED_STRING _EQ] INT
+QUOTED_STRING: /'([^\\']|\\.)*'/
+INT: /-?\d+/
+_EQ: /\s*=\s*/
+_SEP: /,\s*/

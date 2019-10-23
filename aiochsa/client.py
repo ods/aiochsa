@@ -1,37 +1,47 @@
-from typing import AsyncIterable
+from typing import AsyncGenerator
 
 from aiochclient.client import ChClient
+from clickhouse_sqlalchemy.drivers.http.base import ClickHouseDialect_http
 
-from .compiler import compile_statement
+from .compiler import Compiler
 from .exc import DBException
-from .record import Record, RecordFabric
+from .parser import parse_json_compact
+from .record import Record
+from .types import TypeRegistry
 
 
 class ChClientSa(ChClient):
 
-    async def _execute(self, statement: str, *args) -> AsyncIterable[Record]:
-        query = compile_statement(statement, args)
+    def __init__(self, *args, dialect=None, types=None, **kwargs):
+        super().__init__(*args, **kwargs)
+        if dialect is None: # pragma: no cover
+            # XXX Do we actualy need the ability to pass custom dialect?
+            dialect = ClickHouseDialect_http()
+        if types is None:
+            types = TypeRegistry()
+        self._types = types
+        self._compiler = Compiler(dialect=dialect, encode=types.encode)
+
+    async def _execute(
+        self, statement: str, *args,
+    ) -> AsyncGenerator[Record, None]:
+        query = self._compiler.compile_statement(statement, args)
 
         # The rest is a modified copy of `ChClient._execute()`
         data = query.encode()
 
         async with self._session.post(
             self.url,
-            params={'default_format': 'TSVWithNamesAndTypes', **self.params},
-            data=data,
+            params = {'default_format': 'JSONCompact', **self.params},
+            data = data,
         ) as resp:
             if resp.status != 200:
                 body = await resp.read()
                 raise DBException.from_message(body.decode(errors='replace'))
 
-            if resp.content_type == 'text/tab-separated-values':
-                names_line = await resp.content.readline()
-                if not names_line:  # It's INSERT
-                    return
-                types_line = await resp.content.readline()
-                record_fabric = RecordFabric(names_line, types_line)
-                async for line in resp.content:
-                    yield record_fabric.parse_row(line)
+            if resp.content_type == 'application/json':
+                async for row in parse_json_compact(self._types, resp.content):
+                    yield row
 
     def __await__(self):
         # For compartibility with asyncpg (`await pool.acquire(...)`)
