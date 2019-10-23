@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+0.3 (2019-10-23)
+----------------
+
+* Switch from TSVWithNamesAndTypes to JSONCompact
+* Add support for custom type converters
+
+
 0.2 (2019-09-17)
 ----------------
 
