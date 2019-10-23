@@ -2,7 +2,6 @@ import asyncio
 from datetime import datetime
 from decimal import Decimal
 
-from aiochclient import ChClientError
 import pytest
 import sqlalchemy as sa
 

@@ -43,6 +43,7 @@ async def parse_json_compact(
     types: TypeRegistry,
     content: Union[asyncio.StreamReader, aiohttp.StreamReader],
 ) -> AsyncGenerator[Record, None]:
+    # TODO Use iterative JSON parser
     response = json.loads(await content.read(), parse_float=str)
 
     names = []
