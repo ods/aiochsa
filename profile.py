@@ -62,12 +62,11 @@ async def insert(conn, series):
 
 
 async def main(address='localhost:8123'):
-    conn = aiochsa.connect(f'clickhouse://{address}')
-
-    await create_table(conn)
-    series = get_series(10000)
-    for _ in range(10):
-       await insert(conn, series)
+    async with aiochsa.connect(f'clickhouse://{address}') as conn:
+        await create_table(conn)
+        series = get_series(10000)
+        for _ in range(10):
+            await insert(conn, series)
 
 
 @contextmanager
