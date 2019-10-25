@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, List, Optional
+from typing import Any, AsyncGenerator, Iterable, List, Optional
 
 from aiohttp import ClientSession
 from clickhouse_sqlalchemy.drivers.http.base import ClickHouseDialect_http
@@ -10,7 +10,7 @@ from .record import Record
 from .types import TypeRegistry
 
 
-class ChClientSa:
+class Client:
 
     def __init__(
         self, session: ClientSession, *, url='http://localhost:8123/',
@@ -37,42 +37,36 @@ class ChClientSa:
         self._types = types
         self._compiler = Compiler(dialect=dialect, encode=types.encode)
 
-    async def iterate(
-        self, statement: str, *args,
-    ) -> AsyncGenerator[Record, None]:
+    async def _execute(self, statement: str, *args) -> Iterable[Record]:
         query = self._compiler.compile_statement(statement, args)
 
         async with self._session.post(
             self.url,
             params = {'default_format': 'JSONCompact', **self.params},
             data = query.encode(),
-        ) as resp:
-            if resp.status != 200:
-                body = await resp.read()
+        ) as response:
+            if response.status != 200:
+                body = await response.read()
                 raise DBException.from_message(body.decode(errors='replace'))
 
-            if resp.content_type == 'application/json':
-                async for row in parse_json_compact(self._types, resp.content):
-                    yield row
+            if response.content_type == 'application/json':
+                return await parse_json_compact(self._types, response.content)
+
+    async def iterate(
+        self, statement: str, *args,
+    ) -> AsyncGenerator[Record, None]:
+        for row in await self._execute(statement, *args):
+            yield row
 
     async def execute(self, statement: str, *args) -> None:
-        agen = self.iterate(statement, *args)
-        async for _ in agen:
-            break
-        # Needed to finalize context managers and execute finally clauses
-        await agen.aclose()
+        await self._execute(statement, *args)
 
     async def fetch(self, statement: str, *args) -> List[Record]:
-        return [row async for row in self.iterate(statement, *args)]
+        return list(await self._execute(statement, *args))
 
     async def fetchrow(self, statement: str, *args) -> Optional[Record]:
-        agen = self.iterate(statement, *args)
-        row = None
-        async for row in agen:
-            break
-        # Needed to finalize context managers and execute finally clauses
-        await agen.aclose()
-        return row
+        gen = await self._execute(statement, *args)
+        return next(iter(gen), None)
 
     async def fetchval(self, statement: str, *args) -> Any:
         row = await self.fetchrow(statement, *args)
