@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+0.4 (2019-10-29)
+----------------
+
+* Remove dependency on ``aiochclient``
+* More careful cleanup of resources
+
+
 0.3 (2019-10-23)
 ----------------
 

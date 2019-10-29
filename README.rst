@@ -13,6 +13,7 @@ Example
     import sqlalchemy as sa
 
     table = sa.Table(
+        'test', sa.MetaData(),
         sa.Column('id', sa.Integer),
         sa.Column('name', sa.String),
     )
