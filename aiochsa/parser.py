@@ -1,7 +1,7 @@
 import asyncio
 import json
 import pkg_resources
-from typing import AsyncGenerator, AsyncIterable, Iterable, Union
+from typing import AsyncGenerator, Iterable, Union
 
 import aiohttp
 from lark import Lark, Transformer, v_args
