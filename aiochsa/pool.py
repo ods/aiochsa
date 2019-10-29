@@ -60,6 +60,10 @@ class Pool:
     async def release(self, conn):
         pass
 
+    async def iterate(self, *args, **kwargs):
+        async for row in self._client.iterate(*args, **kwargs):
+            yield row
+
     async def execute(self, *args, **kwargs):
         return await self._client.execute(*args, **kwargs)
 

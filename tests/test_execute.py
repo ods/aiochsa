@@ -183,6 +183,28 @@ async def test_join(conn, test_table):
     assert {tuple(row) for row in rows} == {(1, 1), (2, 2), (3, 3)}
 
 
+async def test_iterate(conn, test_table):
+    await conn.execute(
+        test_table.insert(),
+        *[
+            {'id': i + 1, 'name': f'test{i + 1}'}
+            for i in range(3)
+        ],
+    )
+
+    rows_agen = conn.iterate(
+        sa.select([test_table.c.id])
+    )
+    assert [item_id async for (item_id,) in rows_agen] == [1, 2, 3]
+
+
+async def test_fetchval_empty(conn, test_table):
+    value = await conn.fetchval(
+        sa.select([test_table.c.id])
+    )
+    assert value is None
+
+
 async def test_select_params(conn, test_table):
     await conn.execute(
         test_table.insert(),
