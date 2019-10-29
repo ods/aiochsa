@@ -51,6 +51,8 @@ class Client:
 
             if response.content_type == 'application/json':
                 return await parse_json_compact(self._types, response.content)
+            else:
+                return ()
 
     async def iterate(
         self, statement: str, *args,

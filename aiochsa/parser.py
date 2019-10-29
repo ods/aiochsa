@@ -57,7 +57,7 @@ async def parse_json_compact(
 
 def convert_json_compact(
     types: TypeRegistry, json_data: dict,
-) -> AsyncGenerator[Record, None]:
+) -> Iterable[Record]:
     names = []
     converters = []
     for column in json_data['meta']:
