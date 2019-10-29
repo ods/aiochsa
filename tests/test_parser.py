@@ -90,7 +90,6 @@ async def test_parse_json_compact_decimal():
     content.feed_data(json_data)
     content.feed_eof()
 
-    result = parse_json_compact(t.TypeRegistry(), content)
-    [[value]] = [row async for row in result]
+    [[value]] = list(await parse_json_compact(t.TypeRegistry(), content))
     assert isinstance(value, Decimal)
     assert str(value) == '1.2345678901230'

@@ -3,7 +3,7 @@ from urllib.parse import urlsplit, urlunsplit
 
 from aiohttp.client import ClientSession
 
-from .client import ChClientSa
+from .client import Client
 
 
 def dsn_to_params(dsn):
@@ -34,7 +34,7 @@ def dsn_to_params(dsn):
 
 class Pool:
 
-    def __init__(self, dsn, client_class=ChClientSa, **params):
+    def __init__(self, dsn, client_class=Client, **params):
         # TODO Session and connector parameters
         self._session = ClientSession()
         params.update(dsn_to_params(dsn))
@@ -59,6 +59,10 @@ class Pool:
 
     async def release(self, conn):
         pass
+
+    async def iterate(self, *args, **kwargs):
+        async for row in self._client.iterate(*args, **kwargs):
+            yield row
 
     async def execute(self, *args, **kwargs):
         return await self._client.execute(*args, **kwargs)

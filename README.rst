@@ -1,9 +1,7 @@
 aiochsa
 =======
 
-An experimental wrapper around aiochclient_ to use it with SQLAlchemy
-
-.. _aiochclient: https://github.com/maximdanilchenko/aiochclient
+An experimental Clickhouse Python/asyncio library for use with SQLAlchemy core
 
 
 Example
