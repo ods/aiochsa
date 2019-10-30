@@ -1,9 +1,9 @@
 from typing import Any, AsyncGenerator, Iterable, List, Optional
 
 from aiohttp import ClientSession
-from clickhouse_sqlalchemy.drivers.http.base import ClickHouseDialect_http
 
 from .compiler import Compiler
+from .dialect import ClickhouseSaDialect
 from .exc import DBException
 from .parser import parse_json_compact
 from .record import Record
@@ -31,7 +31,7 @@ class Client:
         self.params.update(settings)
         if dialect is None: # pragma: no cover
             # XXX Do we actualy need the ability to pass custom dialect?
-            dialect = ClickHouseDialect_http()
+            dialect = ClickhouseSaDialect()
         if types is None:
             types = TypeRegistry()
         self._types = types
