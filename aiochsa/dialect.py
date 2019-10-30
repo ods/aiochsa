@@ -66,16 +66,6 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
                 [preparer.format_column(c[0]) for c in crud_params_single]
             )
 
-        if self.returning or insert_stmt._returning:
-            returning_clause = self.returning_clause(
-                insert_stmt, self.returning or insert_stmt._returning
-            )
-
-            if self.returning_precedes_values:
-                text += " " + returning_clause
-        else:
-            returning_clause = None
-
         if insert_stmt.select is not None:
             select_text = self.process(self._insert_from_select, **kw)
 
@@ -105,9 +95,6 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
             if post_values_clause:
                 text += " " + post_values_clause
 
-        if returning_clause and not self.returning_precedes_values:
-            text += " " + returning_clause
-
         if self.ctes and toplevel and not self.dialect.cte_follows_insert:
             text = self._render_cte_clause() + text
 
@@ -119,6 +106,5 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
             return text
 
 
-
 class ClickhouseSaDialect(ClickHouseDialect_http):
-    statement_compiler = ClickHouseCompiler
+    statement_compiler = ClickhouseSaSQLCompiler
