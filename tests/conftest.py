@@ -34,8 +34,23 @@ async def conn(dsn):
         yield conn
 
 
-TEST_CREATE_DDL = '''\
-CREATE TABLE test
+@pytest.fixture
+def recreate_table(conn):
+
+    async def _recreate(table_name, create_ddl):
+        try:
+            await conn.execute(f'DROP TABLE {table_name}')
+        except aiochsa.DBException as exc:
+            if exc.code != error_codes.UNKNOWN_TABLE:
+                raise
+
+        await conn.execute(create_ddl)
+
+    return _recreate
+
+
+TEST1_CREATE_DDL = '''\
+CREATE TABLE test1
 (
     id UInt64,
     enum Enum8(''=0, 'ONE'=1, 'TWO'=2),
@@ -47,24 +62,38 @@ ENGINE = MergeTree()
 ORDER BY id
 '''
 
-TEST_DROP_DDL = 'DROP TABLE test'
-
 
 @pytest.fixture
-async def test_table(conn):
-    try:
-        await conn.execute(TEST_DROP_DDL)
-    except aiochsa.DBException as exc:
-        if exc.code != error_codes.UNKNOWN_TABLE:
-            raise
-
-    await conn.execute(TEST_CREATE_DDL)
+async def table_test1(recreate_table):
+    await recreate_table('test1', TEST1_CREATE_DDL)
 
     return sa.Table(
-        'test', sa.MetaData(),
+        'test1', sa.MetaData(),
         sa.Column('id', sa.Integer),
         sa.Column('enum', sa.Enum, default=''),
         sa.Column('name', sa.String),
         sa.Column('timestamp', sa.DateTime, default=datetime.utcnow),
         sa.Column('amount', sa.DECIMAL, default=Decimal(0)),
+    )
+
+
+TEST2_CREATE_DDL = '''\
+CREATE TABLE test2
+(
+    title String,
+    num UInt64
+)
+ENGINE = MergeTree()
+ORDER BY num
+'''
+
+
+@pytest.fixture
+async def table_test2(recreate_table):
+    await recreate_table('test2', TEST2_CREATE_DDL)
+
+    return sa.Table(
+        'test2', sa.MetaData(),
+        sa.Column('title', sa.String),
+        sa.Column('num', sa.Integer),
     )
