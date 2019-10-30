@@ -21,11 +21,7 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
             self, insert_stmt, crud.ISINSERT, **kw
         )
 
-        if (
-            not crud_params
-            and not self.dialect.supports_default_values
-            and not self.dialect.supports_empty_insert
-        ):
+        if not crud_params:
             raise exc.CompileError(
                 "The '%s' dialect with current database "
                 "version settings does not support empty "
@@ -44,7 +40,6 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
             crud_params_single = crud_params
 
         preparer = self.preparer
-        supports_default_values = self.dialect.supports_default_values
 
         text = "INSERT "
 
@@ -61,10 +56,9 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
 
         text += table_text
 
-        if crud_params_single or not supports_default_values:
-            text += " (%s)" % ", ".join(
-                [preparer.format_column(c[0]) for c in crud_params_single]
-            )
+        text += " (%s)" % ", ".join(
+            [preparer.format_column(c[0]) for c in crud_params_single]
+        )
 
         if insert_stmt.select is not None:
             select_text = self.process(self._insert_from_select, **kw)
@@ -73,8 +67,6 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
                 text += " %s%s" % (self._render_cte_clause(), select_text)
             else:
                 text += " %s" % select_text
-        elif not crud_params and supports_default_values:
-            text += " DEFAULT VALUES"
         elif insert_stmt._has_multi_parameters:
             text += " VALUES %s" % (
                 ", ".join(
@@ -108,3 +100,5 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
 
 class ClickhouseSaDialect(ClickHouseDialect_http):
     statement_compiler = ClickhouseSaSQLCompiler
+
+    supports_empty_insert = False
