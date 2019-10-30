@@ -29,31 +29,14 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
             )
 
         if insert_stmt._has_multi_parameters:
-            if not self.dialect.supports_multivalues_insert:
-                raise exc.CompileError(
-                    "The '%s' dialect with current database "
-                    "version settings does not support "
-                    "in-place multirow inserts." % self.dialect.name
-                )
             crud_params_single = crud_params[0]
         else:
             crud_params_single = crud_params
 
         preparer = self.preparer
 
-        text = "INSERT "
-
-        if insert_stmt._prefixes:
-            text += self._generate_prefixes(
-                insert_stmt, insert_stmt._prefixes, **kw
-            )
-
-        text += "INTO "
+        text = "INSERT INTO "
         table_text = preparer.format_table(insert_stmt.table)
-
-        if insert_stmt._hints:
-            _, table_text = self._setup_crud_hints(insert_stmt, table_text)
-
         text += table_text
 
         text += " (%s)" % ", ".join(
