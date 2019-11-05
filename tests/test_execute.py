@@ -184,6 +184,30 @@ async def test_insert_select(conn, table_test1, table_test2):
     assert rows == [('test2', 2), ('test3', 3)]
 
 
+@pytest.mark.xfail(reason='CTE is not supported by clickhouse-sqlalchemy')
+async def test_insert_select_cte(conn, table_test2):
+    await conn.execute(
+        table_test2.insert(), {'title': 'test', 'num': 1},
+    )
+
+    max_num = (
+        sa.select([sa.func.max(table_test2.c.num)])
+            .cte()
+    )
+
+    await conn.execute(
+        table_test2.insert()
+            .from_select(
+                [table_test2.c.num, table_test2.c.title],
+                sa.select([max_num, table_test2.c.title])
+            )
+    )
+    rows = await conn.fetch(
+        table_test2.select()
+    )
+    assert rows == [('test', 1), ('test', 2)]
+
+
 async def test_join(conn, table_test1):
     await conn.execute(
         table_test1.insert(),

@@ -7,7 +7,7 @@ from sqlalchemy.sql import crud
 class ClickhouseSaSQLCompiler(ClickHouseCompiler):
 
     def visit_insert(self, insert_stmt, asfrom=False, **kw):
-        toplevel = not self.stack
+        assert not self.stack # INSERT only at top level
 
         self.stack.append(
             {
@@ -21,7 +21,7 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
             self, insert_stmt, crud.ISINSERT, **kw
         )
 
-        if not crud_params:
+        if not crud_params: # pragma: no cover
             raise exc.CompileError(
                 "The '%s' dialect with current database "
                 "version settings does not support empty "
@@ -46,7 +46,8 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
         if insert_stmt.select is not None:
             select_text = self.process(self._insert_from_select, **kw)
 
-            if self.ctes and toplevel and self.dialect.cte_follows_insert:
+            # TODO Provide visit_cte for Clickhouse variant of CTE
+            if self.ctes:
                 text += " %s%s" % (self._render_cte_clause(), select_text)
             else:
                 text += " %s" % select_text
@@ -60,28 +61,18 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
         else:
             insert_single_values_expr = ", ".join([c[1] for c in crud_params])
             text += " VALUES (%s)" % insert_single_values_expr
-            if toplevel:
-                self.insert_single_values_expr = insert_single_values_expr
+            self.insert_single_values_expr = insert_single_values_expr
 
-        if insert_stmt._post_values_clause is not None:
-            post_values_clause = self.process(
-                insert_stmt._post_values_clause, **kw
-            )
-            if post_values_clause:
-                text += " " + post_values_clause
-
-        if self.ctes and toplevel and not self.dialect.cte_follows_insert:
-            text = self._render_cte_clause() + text
+        assert insert_stmt._post_values_clause is None
 
         self.stack.pop(-1)
 
-        if asfrom:
-            return "(" + text + ")"
-        else:
-            return text
+        assert not asfrom
+        return text
 
 
 class ClickhouseSaDialect(ClickHouseDialect_http):
     statement_compiler = ClickhouseSaSQLCompiler
 
     supports_empty_insert = False
+    cte_follows_insert = True
