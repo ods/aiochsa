@@ -47,7 +47,9 @@ class Client:
         ) as response:
             if response.status != 200:
                 body = await response.read()
-                raise DBException.from_message(body.decode(errors='replace'))
+                raise DBException.from_message(
+                    statement, body.decode(errors='replace'),
+                )
 
             if response.content_type == 'application/json':
                 return await parse_json_compact(self._types, response.content)
