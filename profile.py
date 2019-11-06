@@ -10,7 +10,7 @@ from decimal import Decimal
 import docker
 import os
 from random import randrange
-from time import sleep
+from time import monotonic, sleep
 
 import docker
 import sqlalchemy as sa
@@ -83,4 +83,6 @@ def clickhouse():
 
 if __name__ == '__main__':
     with clickhouse() as address:
+        start = monotonic()
         asyncio.run(main(address))
+        print(f'{monotonic()-start:.3f}')
