@@ -24,6 +24,10 @@ class BaseType(Generic[PyType, JsonType]):
     def from_json(self, value: JsonType) -> PyType:
         return self.py_type(value)
 
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
+        return value
+
     def __eq__(self, other):
         return (
             type(self) == type(other) and
@@ -70,6 +74,10 @@ class DecimalType(BaseType):
     def encode(cls, value: PyType, encode: Callable) -> str:
         return f"'{value}'"
 
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
+        return str(value)
+
 
 class DateType(BaseType):
     py_type = date
@@ -77,6 +85,10 @@ class DateType(BaseType):
     @classmethod
     def encode(cls, value: date, encode=None) -> str:
         return f"'{value.isoformat()}'"
+
+    @classmethod
+    def to_json(cls, value: date, to_json: Callable) -> JsonType:
+        return value.isoformat()
 
     def from_json(self, value: str) -> Optional[date]:
         if value == '0000-00-00':
@@ -91,6 +103,11 @@ class DateTimeType(BaseType):
     def encode(cls, value: datetime, encode=None) -> str:
         value = value.replace(tzinfo=None, microsecond=0)
         return f"'{value.isoformat()}'"
+
+    @classmethod
+    def to_json(cls, value: datetime, to_json: Callable) -> JsonType:
+        value = value.replace(tzinfo=None, microsecond=0)
+        return value.isoformat()
 
     def from_json(self, value: str) -> Optional[datetime]:
         if value == '0000-00-00 00:00:00':
@@ -112,6 +129,18 @@ class DateTimeUTCType(DateTimeType):
         )
         return f"'{value.isoformat()}'"
 
+    @classmethod
+    def to_json(cls, value: datetime, to_json: Callable) -> JsonType:
+        if value.utcoffset() is None:
+            raise ValueError(
+                'Got naive datetime while timezone-aware is expected'
+            )
+        value = (
+            value.astimezone(timezone.utc)
+                .replace(tzinfo=None, microsecond=0)
+        )
+        return value.isoformat()
+
     def from_json(self, value: str) -> datetime:
         return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
 
@@ -123,13 +152,25 @@ class UUIDType(BaseType):
     def encode(cls, value: UUID, encode=None) -> str:
         return f"'{value}'"
 
+    @classmethod
+    def to_json(cls, value: UUID, to_json: Callable) -> JsonType:
+        return str(value)
+
 
 class IPv4Type(BaseType):
     py_type = IPv4Address
 
+    @classmethod
+    def to_json(cls, value: IPv4Address, to_json: Callable) -> JsonType:
+        return str(value)
+
 
 class IPv6Type(BaseType):
     py_type = IPv6Address
+
+    @classmethod
+    def to_json(cls, value: IPv6Address, to_json: Callable) -> JsonType:
+        return str(value)
 
 
 class NothingType(BaseType):
@@ -157,6 +198,10 @@ class TupleType(BaseType):
             ','.join(encode(v) for v in value)
         )
 
+    @classmethod
+    def to_json(cls, value: tuple, to_json: Callable) -> JsonType:
+        return [to_json(v) for v in value]
+
     def from_json(self, value: List[JsonType]) -> tuple:
         assert len(self._item_types) == len(value)
         return tuple(
@@ -178,6 +223,10 @@ class ArrayType(BaseType):
             ','.join(encode(v) for v in value)
         )
 
+    @classmethod
+    def to_json(cls, value: list, to_json: Callable) -> JsonType:
+        return [to_json(v) for v in value]
+
     def from_json(self, value: List[JsonType]) -> list:
         return [self._item_type.from_json(v) for v in value]
 
@@ -190,6 +239,10 @@ class NullableType(BaseType):
 
     @classmethod
     def encode(cls, value: PyType, encode=None) -> str:
+        raise RuntimeError('Must be never called')  # pragma: nocover
+
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
         raise RuntimeError('Must be never called')  # pragma: nocover
 
     def from_json(self, value: JsonType) -> Any:
@@ -206,6 +259,10 @@ class LowCardinalityType(BaseType):
 
     @classmethod
     def encode(cls, value: PyType, encode=None) -> str:
+        raise RuntimeError('Must be never called')  # pragma: nocover
+
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
         raise RuntimeError('Must be never called')  # pragma: nocover
 
     def from_json(self, value: JsonType) -> Any:
@@ -243,6 +300,7 @@ class TypeRegistry:
     def __init__(self, converters=DEFAULT_CONVERTES):
         self._types = {}
         self._encoders = {}
+        self._to_json = {}
         for args in converters:
             self.register(*args)
 
@@ -259,6 +317,7 @@ class TypeRegistry:
         for py_type in py_types:
             assert isinstance(py_type, type)
             self._encoders[py_type] = conv_class.encode
+            self._to_json[py_type] = conv_class.to_json
 
     def __getitem__(self, ch_type_name):
         return self._types[ch_type_name]
@@ -275,5 +334,20 @@ class TypeRegistry:
                     # Cache to speed up further look-ups
                     self._encoders[py_type] = encode
                     return encode(value, self.encode)
+            else:
+                raise TypeError(f'Unsupported type {py_type}')
+
+    def to_json(self, value):
+        py_type = type(value)
+        try:
+            return self._to_json[py_type](value, self.to_json)
+        except KeyError:
+            # Fallback to slower method
+            for subclass in py_type.mro()[1:]:
+                if subclass in self._to_json:
+                    to_json = self._to_json[subclass]
+                    # Cache to speed up further look-ups
+                    self._to_json[py_type] = to_json
+                    return to_json(value, self.to_json)
             else:
                 raise TypeError(f'Unsupported type {py_type}')
