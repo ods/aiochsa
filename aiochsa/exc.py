@@ -21,7 +21,10 @@ class DBException(Exception):
         self.stack_trace = stack_trace
 
     def __str__(self):
-        return f'[Code={self.code}] {self.display_text}: {self.statement}'
+        statement = self.statement
+        if len(statement) > 200:
+            statement = statement[:200] + '...'
+        return f'[Code={self.code}] {self.display_text}: {statement}'
 
     @classmethod
     def from_message(cls, statement, exc_message):
