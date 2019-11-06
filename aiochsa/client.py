@@ -52,7 +52,6 @@ class Client:
                 )
                 for row in json_each_row_parameters
             )
-            print(query)
 
         async with self._session.post(
             self.url,

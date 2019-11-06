@@ -17,22 +17,26 @@ class Compiler:
         # Modeled after `sqlalchemy.engine.base.Connection._execute_clauseelement`
         # (event signaling, caching are removed; separate parameters are merge into
         # clause element)
-        distilled_params = _distill_params(multiparams, {})
-        print(f'distilled_params={distilled_params}')
-        init_compiled_parameters = ()
-        if distilled_params:
-            if isinstance(elem, Insert):
-                pass#elem = elem.values(distilled_params)
+
+        if not multiparams and isinstance(elem, Insert) and elem.parameters:
+            # We disable normal way of extracting parameters, so we have to
+            # handle parameters incorporated into clause with
+            # `Insert.values(...)` call manually.
+            if isinstance(elem.parameters, dict):
+                multiparams = (elem.parameters,)
             else:
-                # For now we support passing parameters separate from
-                # statement for INSERTs only, so we have to inline them into
-                # statement.
-                # FIXME Implement Clickhouse's paramstyle and pass parameters
-                # in the body of request:
-                # https://clickhouse.yandex/docs/en/interfaces/http/#cli-queries-with-parameters
-                #elem = elem.params(*distilled_params)
-                init_compiled_parameters = distilled_params
-                #distilled_params = ()
+                multiparams = tuple(elem.parameters)
+
+        distilled_params = _distill_params(multiparams, {})
+
+        init_compiled_parameters = distilled_params
+        if isinstance(elem, Insert):
+            # `_init_compiled()` method creates placeholders for each row in
+            # `multiparams`.  This is very slow and we don't need them when
+            # passing separately in JSONEachRow format.  As workaroung we
+            # pretend that we don't have parameters at all.
+            init_compiled_parameters = ()
+
         compiled_sql = elem.compile(
             dialect=self._dialect,
             inline=True, # Never add constructs to return default values
@@ -74,11 +78,9 @@ class Compiler:
 
         # Only SQL compiler has this attribute, but not DDL compiler
         if getattr(statement, '_clickhouse_json_each_row', False):
-            print(f'parameters={parameters}')
-            print(f'context.parameters={context.parameters}')
             # We can't use `context.parameters` here, since we trick
-            # `_init_compiled()` to think we have no parameters, so it's always
-            # empty here.
+            # `_init_compiled()` to think we have no parameters, meaning
+            # they're always empty here.
             return context.statement, parameters or context.parameters
         else:
             assert len(context.parameters) == 1
