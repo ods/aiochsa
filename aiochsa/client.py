@@ -1,3 +1,4 @@
+import json
 from typing import Any, AsyncGenerator, Iterable, List, Optional
 
 from aiohttp import ClientSession
@@ -38,7 +39,19 @@ class Client:
         self._compiler = Compiler(dialect=dialect, encode=types.encode)
 
     async def _execute(self, statement: str, *args) -> Iterable[Record]:
-        query = self._compiler.compile_statement(statement, args)
+        query, json_each_row_parameters = self._compiler.compile_statement(
+            statement, args,
+        )
+        if json_each_row_parameters:
+            to_json = self._types.to_json # lookup optimization
+            query += '\n'
+            query += '\n'.join(
+                json.dumps(
+                    {name: to_json(value) for name, value in row.items()}
+                )
+                for row in json_each_row_parameters
+            )
+            print(query)
 
         async with self._session.post(
             self.url,
