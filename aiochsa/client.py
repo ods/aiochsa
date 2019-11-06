@@ -1,4 +1,4 @@
-import json
+import simplejson as json
 from typing import Any, AsyncGenerator, Iterable, List, Optional
 
 from aiohttp import ClientSession
@@ -47,7 +47,8 @@ class Client:
             query += '\n'
             query += '\n'.join(
                 json.dumps(
-                    {name: to_json(value) for name, value in row.items()}
+                    {name: to_json(value) for name, value in row.items()},
+                    use_decimal=True,
                 )
                 for row in json_each_row_parameters
             )

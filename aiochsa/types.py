@@ -9,7 +9,7 @@ from uuid import UUID
 
 NoneType = type(None)
 PyType = TypeVar('PyType')
-JsonType = TypeVar('JsonType', NoneType, int, str, list)
+JsonType = TypeVar('JsonType', NoneType, int, float, Decimal, str, list)
 
 
 class BaseType(Generic[PyType, JsonType]):
@@ -76,7 +76,9 @@ class DecimalType(BaseType):
 
     @classmethod
     def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
-        return str(value)
+        # Clickhouse requires serializing it without quotes, so we use
+        # `simplejson.dumps(..., use_decimal=True)`
+        return value
 
 
 class DateType(BaseType):

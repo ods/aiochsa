@@ -1,5 +1,5 @@
 import asyncio
-import json
+import simplejson as json
 import pkg_resources
 from typing import AsyncGenerator, Iterable, Union
 
