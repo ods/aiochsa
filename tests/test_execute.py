@@ -104,6 +104,7 @@ async def test_unsupported_type(conn):
         )
 
 
+@pytest.mark.xfail(reason='Feature is disabled in favour of speed')
 async def test_defaults(conn, table_test1):
     ts_before = datetime.utcnow().replace(microsecond=0)
     values = {
