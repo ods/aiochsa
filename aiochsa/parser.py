@@ -1,6 +1,6 @@
 import asyncio
+import pkgutil
 import simplejson as json
-import pkg_resources
 from typing import AsyncGenerator, Iterable, Union
 
 import aiohttp
@@ -14,7 +14,7 @@ __all__ = ['parse_type']
 
 
 type_parser = Lark(
-    pkg_resources.resource_string(__name__, 'type.lark').decode()
+    pkgutil.get_data(__name__, 'type.lark').decode()
 )
 
 
