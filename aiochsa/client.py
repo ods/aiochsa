@@ -36,7 +36,7 @@ class Client:
         if types is None:
             types = TypeRegistry()
         self._types = types
-        self._compiler = Compiler(dialect=dialect, encode=types.encode)
+        self._compiler = Compiler(dialect=dialect, escape=types.escape)
 
     async def _execute(self, statement: str, *args) -> Iterable[Record]:
         query, json_each_row_parameters = self._compiler.compile_statement(

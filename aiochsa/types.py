@@ -18,7 +18,7 @@ class BaseType(Generic[PyType, JsonType]):
     py_type: Optional[Type[PyType]] = None
 
     @classmethod
-    def encode(cls, value: PyType, encode: Callable) -> str:
+    def escape(cls, value: PyType, escape: Callable) -> str:
         return str(value)
 
     def from_json(self, value: JsonType) -> PyType:
@@ -48,7 +48,7 @@ class StrType(BaseType):
     py_type = str
 
     @classmethod
-    def encode(cls, value: str, encode=None) -> str:
+    def escape(cls, value: str, escape=None) -> str:
         value = value.replace('\\', '\\\\').replace("'", "\\'")
         return f"'{value}'"
 
@@ -71,7 +71,7 @@ class DecimalType(BaseType):
     py_type = Decimal
 
     @classmethod
-    def encode(cls, value: PyType, encode: Callable) -> str:
+    def escape(cls, value: PyType, escape: Callable) -> str:
         return f"'{value}'"
 
     @classmethod
@@ -85,7 +85,7 @@ class DateType(BaseType):
     py_type = date
 
     @classmethod
-    def encode(cls, value: date, encode=None) -> str:
+    def escape(cls, value: date, escape=None) -> str:
         return f"'{value.isoformat()}'"
 
     @classmethod
@@ -102,7 +102,7 @@ class DateTimeType(BaseType):
     py_type = datetime
 
     @classmethod
-    def encode(cls, value: datetime, encode=None) -> str:
+    def escape(cls, value: datetime, escape=None) -> str:
         value = value.replace(tzinfo=None, microsecond=0)
         return f"'{value.isoformat()}'"
 
@@ -120,7 +120,7 @@ class DateTimeType(BaseType):
 class DateTimeUTCType(DateTimeType):
 
     @classmethod
-    def encode(cls, value: datetime, encode=None) -> str:
+    def escape(cls, value: datetime, escape=None) -> str:
         if value.utcoffset() is None:
             raise ValueError(
                 'Got naive datetime while timezone-aware is expected'
@@ -151,7 +151,7 @@ class UUIDType(BaseType):
     py_type = UUID
 
     @classmethod
-    def encode(cls, value: UUID, encode=None) -> str:
+    def escape(cls, value: UUID, escape=None) -> str:
         return f"'{value}'"
 
     @classmethod
@@ -178,7 +178,7 @@ class IPv6Type(BaseType):
 class NothingType(BaseType):
     py_type = NoneType
 
-    def encode(self, value: NoneType, encode=None) -> str:
+    def escape(self, value: NoneType, escape=None) -> str:
         return 'NULL'
 
     def from_json(self, value: NoneType) -> None:
@@ -195,9 +195,9 @@ class TupleType(BaseType):
         self._item_types = item_types
 
     @classmethod
-    def encode(cls, value: tuple, encode=None) -> str:
+    def escape(cls, value: tuple, escape=None) -> str:
         return '({})'.format(
-            ','.join(encode(v) for v in value)
+            ','.join(escape(v) for v in value)
         )
 
     @classmethod
@@ -220,9 +220,9 @@ class ArrayType(BaseType):
         self._item_type = item_type
 
     @classmethod
-    def encode(cls, value: list, encode) -> str:
+    def escape(cls, value: list, escape) -> str:
         return '[{}]'.format(
-            ','.join(encode(v) for v in value)
+            ','.join(escape(v) for v in value)
         )
 
     @classmethod
@@ -240,7 +240,7 @@ class NullableType(BaseType):
         self._item_type = item_type
 
     @classmethod
-    def encode(cls, value: PyType, encode=None) -> str:
+    def escape(cls, value: PyType, escape=None) -> str:
         raise RuntimeError('Must be never called')  # pragma: nocover
 
     @classmethod
@@ -260,7 +260,7 @@ class LowCardinalityType(BaseType):
         self._item_type = item_type
 
     @classmethod
-    def encode(cls, value: PyType, encode=None) -> str:
+    def escape(cls, value: PyType, escape=None) -> str:
         raise RuntimeError('Must be never called')  # pragma: nocover
 
     @classmethod
@@ -301,7 +301,7 @@ class TypeRegistry:
 
     def __init__(self, converters=DEFAULT_CONVERTES):
         self._types = {}
-        self._encoders = {}
+        self._escapers = {}
         self._to_json = {}
         for args in converters:
             self.register(*args)
@@ -318,24 +318,24 @@ class TypeRegistry:
             py_types = [py_types]
         for py_type in py_types:
             assert isinstance(py_type, type)
-            self._encoders[py_type] = conv_class.encode
+            self._escapers[py_type] = conv_class.escape
             self._to_json[py_type] = conv_class.to_json
 
     def __getitem__(self, ch_type_name):
         return self._types[ch_type_name]
 
-    def encode(self, value):
+    def escape(self, value):
         py_type = type(value)
         try:
-            return self._encoders[py_type](value, self.encode)
+            return self._escapers[py_type](value, self.escape)
         except KeyError:
             # Fallback to slower method
             for subclass in py_type.mro()[1:]:
-                if subclass in self._encoders:
-                    encode = self._encoders[subclass]
+                if subclass in self._escapers:
+                    escape = self._escapers[subclass]
                     # Cache to speed up further look-ups
-                    self._encoders[py_type] = encode
-                    return encode(value, self.encode)
+                    self._escapers[py_type] = escape
+                    return escape(value, self.escape)
             else:
                 raise TypeError(f'Unsupported type {py_type}')
 

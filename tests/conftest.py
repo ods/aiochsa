@@ -7,6 +7,7 @@ import sqlalchemy as sa
 
 import aiochsa
 from aiochsa import error_codes
+from aiochsa.dialect import ClickhouseSaDialect
 
 
 def pytest_collection_modifyitems(items):
@@ -97,3 +98,31 @@ async def table_test2(recreate_table):
         sa.Column('title', sa.String),
         sa.Column('num', sa.Integer),
     )
+
+
+TABLE_FOR_TYPE_DDL_TEMPLATE = '''\
+CREATE TABLE test_for_type
+(
+    value {type}
+)
+ENGINE = Log()
+'''
+
+
+@pytest.fixture
+def table_for_type(recreate_table):
+
+    async def _create(sa_type):
+        if isinstance(sa_type, type):
+            sa_type = sa_type()
+        type_str = sa_type.compile(dialect=ClickhouseSaDialect())
+
+        create_ddl = TABLE_FOR_TYPE_DDL_TEMPLATE.format(type=type_str)
+        await recreate_table('test_for_type', create_ddl)
+
+        return sa.Table(
+            'test_for_type', sa.MetaData(),
+            sa.Column('value', sa_type),
+        )
+
+    return _create

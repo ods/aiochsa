@@ -9,9 +9,9 @@ from sqlalchemy.sql.functions import FunctionElement
 
 class Compiler:
 
-    def __init__(self, dialect, encode):
+    def __init__(self, dialect, escape):
         self._dialect = dialect
-        self._encode = encode
+        self._escape = escape
 
     def _execute_clauseelement(self, elem, multiparams):
         # Modeled after `sqlalchemy.engine.base.Connection._execute_clauseelement`
@@ -85,7 +85,7 @@ class Compiler:
         else:
             assert len(context.parameters) == 1
             escaped = {
-                name: self._encode(value)
+                name: self._escape(value)
                 for name, value in context.parameters[0].items()
             }
             return context.statement % escaped, ()
