@@ -14,7 +14,8 @@ __all__ = ['parse_type']
 
 
 type_parser = Lark(
-    pkgutil.get_data(__name__, 'type.lark').decode()
+    pkgutil.get_data(__name__, 'type.lark').decode(),
+    parser='lalr',
 )
 
 
