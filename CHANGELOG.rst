@@ -1,6 +1,15 @@
 Change Log
 ==========
 
+0.5 (2019-11-12)
+----------------
+
+* Pass INSERT values in JSONEachRow format instead of inlining (that makes
+  driver about 10x times faster)
+* Column defaults now are ignored
+* Statement fragment in string representation of exception
+
+
 0.4 (2019-10-29)
 ----------------
 
