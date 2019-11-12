@@ -4,6 +4,7 @@ import enum
 from ipaddress import IPv4Address, IPv6Address
 import itertools
 from random import randrange
+from typing import Iterable, Tuple, Type, Union
 import uuid
 
 import pytest
@@ -47,64 +48,98 @@ class CHEnum16(int, enum.Enum):
     BAZ = 32767
 
 
+class CustomStr(str):
+    pass
+
+
+SaType = Union[sa.types.TypeEngine, Type[sa.types.TypeEngine]]
+
+def combine_typed_rapameters(spec_seq: Iterable[Tuple[SaType, Iterable]]):
+    return list( # Wrap into list to make it reusable (iterator is one-off)
+        itertools.chain(*[
+            list(itertools.product([sa_type], values))
+            for sa_type, values in spec_seq
+        ])
+    )
+
+
+TYPED_PARAMETERS = combine_typed_rapameters([
+    (t.String, ['', '\0', "'", '"', '\\', "\\'", 'зразок', CustomStr('abc')]),
+    (t.String(16), ['', 'зразок']),
+
+    (t.Enum8(CHEnum8), list(PyEnum)),
+    (t.Enum16(CHEnum16), list(PyEnum)),
+
+    (t.Int8, [-128, 0, 127]),
+    (t.UInt8, [0, 255]),
+    (t.Int16, [-32768, 0, 32767]),
+    (t.UInt16, [0, 65535]),
+    (t.Int32, [-2147483648, 0, 2147483647]),
+    (t.UInt32, [0, 4294967295]),
+    (t.Int64, [-9223372036854775808, 0, 9223372036854775807]),
+    (t.UInt64, [0, 18446744073709551615]),
+
+    # `nan`, `inf`, `-inf` are returned as `null` in JSON formats
+    # 0. and -0. are considered equal in Python
+    (t.Float32, [0., -0., 1e-37, -1e-37, 1e38, -1e38]),
+    (t.Float64, [0., -0., 1e-307, -1e-307, 1e308, -1e308]),
+
+    (t.Decimal(9, 4), map(Decimal, [0, '1.2345', '-1.2345'])),
+    (t.Decimal(18, 9), map(Decimal,
+        [0, '1.234567891', '-1.234567891']
+    )),
+    (t.Decimal(38, 19), map(Decimal,
+        [0, '1.234567891234567891', '-1.234567891234567891']
+    )),
+
+    # Start of the epoch is not supported by Clickhouse, at least one
+    # second or day must be added
+    (t.Date, [date(1970, 1, 2), date.today()]),
+    (t.DateTime, [
+        datetime(1970, 1, 1, 0, 0, 1),
+        datetime.now().replace(microsecond=0)
+    ]),
+
+    (t.UUID, [uuid.uuid4()]),
+    (t.IPv4, map(IPv4Address, [0, MAX_IPV4, randrange(1, MAX_IPV4)])),
+    (t.IPv6, map(IPv6Address, [0, MAX_IPV6, randrange(1, MAX_IPV6)])),
+
+    (t.Nullable(t.String), [None, '', 'abc']),
+    (t.LowCardinality(t.String), ['', 'abc']),
+    (t.LowCardinality(t.Nullable(t.String)), [None, '', 'abc']),
+    (t.Array(t.String), [['foo', 'bar']]),
+
+    # TODO Tests for `Tuple`, including deeply nested
+])
+
+
 @pytest.mark.parametrize(
     'sa_type,value',
-    itertools.chain(*[
-        list(itertools.product([sa_type], values)) for sa_type, values in
-        [
-            (t.String, ['', '\0', "'", '"', '\\', "\\'", 'зразок']),
-            (t.String(16), ['', 'зразок']),
-
-            (t.Enum8(CHEnum8), list(PyEnum)),
-            (t.Enum16(CHEnum16), list(PyEnum)),
-
-            (t.Int8, [-128, 0, 127]),
-            (t.UInt8, [0, 255]),
-            (t.Int16, [-32768, 0, 32767]),
-            (t.UInt16, [0, 65535]),
-            (t.Int32, [-2147483648, 0, 2147483647]),
-            (t.UInt32, [0, 4294967295]),
-            (t.Int64, [-9223372036854775808, 0, 9223372036854775807]),
-            (t.UInt64, [0, 18446744073709551615]),
-
-            # `nan`, `inf`, `-inf` are returned as `null` in JSON formats
-            # 0. and -0. are considered equal in Python
-            (t.Float32, [0., -0., 1e-37, -1e-37, 1e38, -1e38]),
-            (t.Float64, [0., -0., 1e-307, -1e-307, 1e308, -1e308]),
-
-            (t.Decimal(9, 4), map(Decimal, [0, '1.2345', '-1.2345'])),
-            (t.Decimal(18, 9), map(Decimal,
-                [0, '1.234567891', '-1.234567891']
-            )),
-            (t.Decimal(38, 19), map(Decimal,
-                [0, '1.234567891234567891', '-1.234567891234567891']
-            )),
-
-            # Start of the epoch is not supported by Clickhouse, at least one
-            # second or day must be added
-            (t.Date, [date(1970, 1, 2), date.today()]),
-            (t.DateTime, [
-                datetime(1970, 1, 1, 0, 0, 1),
-                datetime.now().replace(microsecond=0)
-            ]),
-
-            (t.UUID, [uuid.uuid4()]),
-            (t.IPv4, map(IPv4Address, [0, MAX_IPV4, randrange(1, MAX_IPV4)])),
-            (t.IPv6, map(IPv6Address, [0, MAX_IPV6, randrange(1, MAX_IPV6)])),
-
-            (t.Nullable(t.String), [None, '', 'abc']),
-            (t.LowCardinality(t.String), ['', 'abc']),
-            (t.LowCardinality(t.Nullable(t.String)), [None, '', 'abc']),
-            (t.Array(t.String), [['foo', 'bar']]),
-
-            # TODO Tests for `Tuple`, including deeply nested
-        ]
-    ]),
+    TYPED_PARAMETERS,
     ids = parametrized_id,
 )
 async def test_cast_round(conn, sa_type, value):
+    # Select parameters go through `escape()` method of type
     result = await conn.fetchval(
         sa.select([sa.func.cast(value, sa_type)])
+    )
+    assert result == value
+
+
+@pytest.mark.parametrize(
+    'sa_type,value',
+    TYPED_PARAMETERS,
+    ids = parametrized_id,
+)
+async def test_insert_select_round(conn, table_for_type, sa_type, value):
+    # Insert parameters go through `to_json()` method of type
+    table = await table_for_type(sa_type)
+    await conn.execute(
+        table.insert(),
+        {'value': value},
+    )
+    result = await conn.fetchval(
+        table.select()
     )
     assert result == value
 
@@ -155,25 +190,59 @@ async def conn_utc(dsn):
         yield conn
 
 
+DATETIME_UTC_PARAMETERS = [
+    datetime(1970, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
+    datetime.utcnow().replace(tzinfo=timezone.utc, microsecond=0),
+]
+
+
 @pytest.mark.parametrize(
     'value',
-    [
-        datetime(1970, 1, 1, 0, 0, 1, tzinfo=timezone.utc),
-        datetime.utcnow().replace(tzinfo=timezone.utc, microsecond=0),
-    ],
+    DATETIME_UTC_PARAMETERS,
     ids = parametrized_id,
 )
-async def test_datetime_utc(conn_utc, value):
+async def test_datetime_utc_escape(conn_utc, value):
+    # Select parameters go through `escape()` method of type
     result = await conn_utc.fetchval(
         sa.func.toDateTime(value)
     )
     assert result == value
 
 
-async def test_datetime_utc_pass_naive(conn_utc):
+@pytest.mark.parametrize(
+    'value',
+    DATETIME_UTC_PARAMETERS,
+    ids = parametrized_id,
+)
+async def test_datetime_utc_insert_select(conn_utc, table_for_type, value):
+    # Insert parameters go through `to_json()` method of type
+    table = await table_for_type(sa.DateTime)
+    await conn_utc.execute(
+        table.insert(),
+        {'value': value},
+    )
+
+    result = await conn_utc.fetchval(
+        table.select()
+    )
+    assert result == value
+
+
+async def test_datetime_utc_escape_naive(conn_utc):
+    # Select parameters go through `escape()` method of type
     with pytest.raises(ValueError):
         await conn_utc.fetchval(
             sa.func.toDateTime(datetime.now())
+        )
+
+
+async def test_datetime_utc_insert_naive(conn_utc, table_for_type):
+    # Insert parameters go through `to_json()` method of type
+    table = await table_for_type(sa.DateTime)
+    with pytest.raises(ValueError):
+        await conn_utc.execute(
+            table.insert(),
+            {'value': datetime.now()},
         )
 
 

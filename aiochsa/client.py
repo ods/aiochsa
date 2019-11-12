@@ -1,9 +1,10 @@
+import simplejson as json
 from typing import Any, AsyncGenerator, Iterable, List, Optional
 
 from aiohttp import ClientSession
-from clickhouse_sqlalchemy.drivers.http.base import ClickHouseDialect_http
 
 from .compiler import Compiler
+from .dialect import ClickhouseSaDialect
 from .exc import DBException
 from .parser import parse_json_compact
 from .record import Record
@@ -31,14 +32,26 @@ class Client:
         self.params.update(settings)
         if dialect is None: # pragma: no cover
             # XXX Do we actualy need the ability to pass custom dialect?
-            dialect = ClickHouseDialect_http()
+            dialect = ClickhouseSaDialect()
         if types is None:
             types = TypeRegistry()
         self._types = types
-        self._compiler = Compiler(dialect=dialect, encode=types.encode)
+        self._compiler = Compiler(dialect=dialect, escape=types.escape)
 
     async def _execute(self, statement: str, *args) -> Iterable[Record]:
-        query = self._compiler.compile_statement(statement, args)
+        query, json_each_row_parameters = self._compiler.compile_statement(
+            statement, args,
+        )
+        if json_each_row_parameters:
+            to_json = self._types.to_json # lookup optimization
+            query += '\n'
+            query += '\n'.join(
+                json.dumps(
+                    {name: to_json(value) for name, value in row.items()},
+                    use_decimal=True,
+                )
+                for row in json_each_row_parameters
+            )
 
         async with self._session.post(
             self.url,
@@ -47,7 +60,9 @@ class Client:
         ) as response:
             if response.status != 200:
                 body = await response.read()
-                raise DBException.from_message(body.decode(errors='replace'))
+                raise DBException.from_message(
+                    query, body.decode(errors='replace'),
+                )
 
             if response.content_type == 'application/json':
                 return await parse_json_compact(self._types, response.content)

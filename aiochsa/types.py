@@ -9,7 +9,7 @@ from uuid import UUID
 
 NoneType = type(None)
 PyType = TypeVar('PyType')
-JsonType = TypeVar('JsonType', NoneType, int, str, list)
+JsonType = TypeVar('JsonType', NoneType, int, float, Decimal, str, list)
 
 
 class BaseType(Generic[PyType, JsonType]):
@@ -18,11 +18,15 @@ class BaseType(Generic[PyType, JsonType]):
     py_type: Optional[Type[PyType]] = None
 
     @classmethod
-    def encode(cls, value: PyType, encode: Callable) -> str:
+    def escape(cls, value: PyType, escape: Callable) -> str:
         return str(value)
 
     def from_json(self, value: JsonType) -> PyType:
         return self.py_type(value)
+
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
+        return value
 
     def __eq__(self, other):
         return (
@@ -44,7 +48,7 @@ class StrType(BaseType):
     py_type = str
 
     @classmethod
-    def encode(cls, value: str, encode=None) -> str:
+    def escape(cls, value: str, escape=None) -> str:
         value = value.replace('\\', '\\\\').replace("'", "\\'")
         return f"'{value}'"
 
@@ -67,16 +71,26 @@ class DecimalType(BaseType):
     py_type = Decimal
 
     @classmethod
-    def encode(cls, value: PyType, encode: Callable) -> str:
+    def escape(cls, value: PyType, escape: Callable) -> str:
         return f"'{value}'"
+
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
+        # Clickhouse requires serializing it without quotes, so we use
+        # `simplejson.dumps(..., use_decimal=True)`
+        return value
 
 
 class DateType(BaseType):
     py_type = date
 
     @classmethod
-    def encode(cls, value: date, encode=None) -> str:
+    def escape(cls, value: date, escape=None) -> str:
         return f"'{value.isoformat()}'"
+
+    @classmethod
+    def to_json(cls, value: date, to_json: Callable) -> JsonType:
+        return value.isoformat()
 
     def from_json(self, value: str) -> Optional[date]:
         if value == '0000-00-00':
@@ -88,9 +102,14 @@ class DateTimeType(BaseType):
     py_type = datetime
 
     @classmethod
-    def encode(cls, value: datetime, encode=None) -> str:
+    def escape(cls, value: datetime, escape=None) -> str:
         value = value.replace(tzinfo=None, microsecond=0)
         return f"'{value.isoformat()}'"
+
+    @classmethod
+    def to_json(cls, value: datetime, to_json: Callable) -> JsonType:
+        value = value.replace(tzinfo=None, microsecond=0)
+        return value.isoformat()
 
     def from_json(self, value: str) -> Optional[datetime]:
         if value == '0000-00-00 00:00:00':
@@ -101,7 +120,7 @@ class DateTimeType(BaseType):
 class DateTimeUTCType(DateTimeType):
 
     @classmethod
-    def encode(cls, value: datetime, encode=None) -> str:
+    def escape(cls, value: datetime, escape=None) -> str:
         if value.utcoffset() is None:
             raise ValueError(
                 'Got naive datetime while timezone-aware is expected'
@@ -112,6 +131,18 @@ class DateTimeUTCType(DateTimeType):
         )
         return f"'{value.isoformat()}'"
 
+    @classmethod
+    def to_json(cls, value: datetime, to_json: Callable) -> JsonType:
+        if value.utcoffset() is None:
+            raise ValueError(
+                'Got naive datetime while timezone-aware is expected'
+            )
+        value = (
+            value.astimezone(timezone.utc)
+                .replace(tzinfo=None, microsecond=0)
+        )
+        return value.isoformat()
+
     def from_json(self, value: str) -> datetime:
         return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
 
@@ -120,22 +151,34 @@ class UUIDType(BaseType):
     py_type = UUID
 
     @classmethod
-    def encode(cls, value: UUID, encode=None) -> str:
+    def escape(cls, value: UUID, escape=None) -> str:
         return f"'{value}'"
+
+    @classmethod
+    def to_json(cls, value: UUID, to_json: Callable) -> JsonType:
+        return str(value)
 
 
 class IPv4Type(BaseType):
     py_type = IPv4Address
 
+    @classmethod
+    def to_json(cls, value: IPv4Address, to_json: Callable) -> JsonType:
+        return str(value)
+
 
 class IPv6Type(BaseType):
     py_type = IPv6Address
+
+    @classmethod
+    def to_json(cls, value: IPv6Address, to_json: Callable) -> JsonType:
+        return str(value)
 
 
 class NothingType(BaseType):
     py_type = NoneType
 
-    def encode(self, value: NoneType, encode=None) -> str:
+    def escape(self, value: NoneType, escape=None) -> str:
         return 'NULL'
 
     def from_json(self, value: NoneType) -> None:
@@ -152,10 +195,14 @@ class TupleType(BaseType):
         self._item_types = item_types
 
     @classmethod
-    def encode(cls, value: tuple, encode=None) -> str:
+    def escape(cls, value: tuple, escape=None) -> str:
         return '({})'.format(
-            ','.join(encode(v) for v in value)
+            ','.join(escape(v) for v in value)
         )
+
+    @classmethod
+    def to_json(cls, value: tuple, to_json: Callable) -> JsonType:
+        return [to_json(v) for v in value]
 
     def from_json(self, value: List[JsonType]) -> tuple:
         assert len(self._item_types) == len(value)
@@ -173,10 +220,14 @@ class ArrayType(BaseType):
         self._item_type = item_type
 
     @classmethod
-    def encode(cls, value: list, encode) -> str:
+    def escape(cls, value: list, escape) -> str:
         return '[{}]'.format(
-            ','.join(encode(v) for v in value)
+            ','.join(escape(v) for v in value)
         )
+
+    @classmethod
+    def to_json(cls, value: list, to_json: Callable) -> JsonType:
+        return [to_json(v) for v in value]
 
     def from_json(self, value: List[JsonType]) -> list:
         return [self._item_type.from_json(v) for v in value]
@@ -189,7 +240,11 @@ class NullableType(BaseType):
         self._item_type = item_type
 
     @classmethod
-    def encode(cls, value: PyType, encode=None) -> str:
+    def escape(cls, value: PyType, escape=None) -> str:
+        raise RuntimeError('Must be never called')  # pragma: nocover
+
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
         raise RuntimeError('Must be never called')  # pragma: nocover
 
     def from_json(self, value: JsonType) -> Any:
@@ -205,7 +260,11 @@ class LowCardinalityType(BaseType):
         self._item_type = item_type
 
     @classmethod
-    def encode(cls, value: PyType, encode=None) -> str:
+    def escape(cls, value: PyType, escape=None) -> str:
+        raise RuntimeError('Must be never called')  # pragma: nocover
+
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
         raise RuntimeError('Must be never called')  # pragma: nocover
 
     def from_json(self, value: JsonType) -> Any:
@@ -242,7 +301,8 @@ class TypeRegistry:
 
     def __init__(self, converters=DEFAULT_CONVERTES):
         self._types = {}
-        self._encoders = {}
+        self._escapers = {}
+        self._to_json = {}
         for args in converters:
             self.register(*args)
 
@@ -258,22 +318,38 @@ class TypeRegistry:
             py_types = [py_types]
         for py_type in py_types:
             assert isinstance(py_type, type)
-            self._encoders[py_type] = conv_class.encode
+            self._escapers[py_type] = conv_class.escape
+            self._to_json[py_type] = conv_class.to_json
 
     def __getitem__(self, ch_type_name):
         return self._types[ch_type_name]
 
-    def encode(self, value):
+    def escape(self, value):
         py_type = type(value)
         try:
-            return self._encoders[py_type](value, self.encode)
+            return self._escapers[py_type](value, self.escape)
         except KeyError:
             # Fallback to slower method
             for subclass in py_type.mro()[1:]:
-                if subclass in self._encoders:
-                    encode = self._encoders[subclass]
+                if subclass in self._escapers:
+                    escape = self._escapers[subclass]
                     # Cache to speed up further look-ups
-                    self._encoders[py_type] = encode
-                    return encode(value, self.encode)
+                    self._escapers[py_type] = escape
+                    return escape(value, self.escape)
+            else:
+                raise TypeError(f'Unsupported type {py_type}')
+
+    def to_json(self, value):
+        py_type = type(value)
+        try:
+            return self._to_json[py_type](value, self.to_json)
+        except KeyError:
+            # Fallback to slower method
+            for subclass in py_type.mro()[1:]:
+                if subclass in self._to_json:
+                    to_json = self._to_json[subclass]
+                    # Cache to speed up further look-ups
+                    self._to_json[py_type] = to_json
+                    return to_json(value, self.to_json)
             else:
                 raise TypeError(f'Unsupported type {py_type}')
