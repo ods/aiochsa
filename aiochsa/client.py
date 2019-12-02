@@ -95,6 +95,10 @@ class Client:
         yield from []
         return self
 
+    async def close(self):
+        # For compartibility with asyncpg
+        pass
+
     # Allow using client as context manager when returned from `Pool.acquire()`
     async def __aenter__(self):
         return self
