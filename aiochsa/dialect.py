@@ -2,11 +2,17 @@ from clickhouse_sqlalchemy.drivers.base import ClickHouseCompiler
 from clickhouse_sqlalchemy.drivers.http.base import ClickHouseDialect_http
 from sqlalchemy import exc
 from sqlalchemy.sql import crud
+from sqlalchemy.sql.compiler import SQLCompiler
 
 
 class ClickhouseSaSQLCompiler(ClickHouseCompiler):
 
     _clickhouse_json_each_row = False
+
+    def visit_column(self, *args, **kwargs):
+        # Jump over method redefined by clickhouse_sqlalchemy. See
+        # https://github.com/xzkostyan/clickhouse-sqlalchemy/issues/35#issuecomment-508902572
+        return SQLCompiler.visit_column(self, *args, **kwargs)
 
     def visit_insert(self, insert_stmt, asfrom=False, **kw):
         assert not self.stack # INSERT only at top level
