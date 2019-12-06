@@ -13,8 +13,8 @@ from clickhouse_sqlalchemy import types as t
 
 import aiochsa
 from aiochsa.types import (
-    ArrayType, BaseType, DateTimeUTCType, IntType, LowCardinalityType,
-    NullableType, SimpleAggregateFunction, StrType, TupleType, TypeRegistry,
+    ArrayType, BaseType, DateTimeUTCType, IntType, NullableType, ProxyType,
+    StrType, TupleType, TypeRegistry,
 )
 
 
@@ -255,7 +255,8 @@ def _get_all_subclasses(cls):
         yield from _get_all_subclasses(subcls)
 
 SIMPLE_TYPE_CLASSES = [
-    cls for cls in _get_all_subclasses(BaseType) if not cls.__slots__
+    cls for cls in _get_all_subclasses(BaseType)
+    if not cls.__slots__ and not issubclass(cls, ProxyType)
 ]
 
 
@@ -274,7 +275,7 @@ def test_eq_simple(type_class):
 
 @pytest.mark.parametrize(
     'type_class',
-    [ArrayType, NullableType, LowCardinalityType, SimpleAggregateFunction],
+    [ArrayType, NullableType],
 )
 def test_eq_wrapping(type_class):
     type_obj = type_class(StrType())

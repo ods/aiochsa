@@ -233,11 +233,10 @@ class ArrayType(BaseType):
         return [self._item_type.from_json(v) for v in value]
 
 
-class SimpleAggregateFunction(BaseType):
-    __slots__ = ('_item_type',)
+class ProxyType(BaseType):
 
-    def __init__(self, item_type):
-        self._item_type = item_type
+    def __new__(cls, item_type):
+        return item_type
 
     @classmethod
     def escape(cls, value: PyType, escape=None) -> str:
@@ -246,9 +245,6 @@ class SimpleAggregateFunction(BaseType):
     @classmethod
     def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
         raise RuntimeError('Must be never called')  # pragma: nocover
-
-    def from_json(self, value: JsonType) -> Any:
-        return self._item_type.from_json(value)
 
 
 class NullableType(BaseType):
@@ -268,24 +264,6 @@ class NullableType(BaseType):
     def from_json(self, value: JsonType) -> Any:
         if value is None:
             return
-        return self._item_type.from_json(value)
-
-
-class LowCardinalityType(BaseType):
-    __slots__ = ('_item_type',)
-
-    def __init__(self, item_type):
-        self._item_type = item_type
-
-    @classmethod
-    def escape(cls, value: PyType, escape=None) -> str:
-        raise RuntimeError('Must be never called')  # pragma: nocover
-
-    @classmethod
-    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
-        raise RuntimeError('Must be never called')  # pragma: nocover
-
-    def from_json(self, value: JsonType) -> Any:
         return self._item_type.from_json(value)
 
 
@@ -311,8 +289,7 @@ DEFAULT_CONVERTES = [
     (TupleType, ['Tuple'], tuple),
     (ArrayType, ['Array'], list),
     (NullableType, ['Nullable']),
-    (LowCardinalityType, ['LowCardinality']),
-    (SimpleAggregateFunction, ['SimpleAggregateFunction']),
+    (ProxyType, ['LowCardinality', 'SimpleAggregateFunction']),
 ]
 
 
