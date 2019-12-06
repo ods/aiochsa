@@ -65,7 +65,11 @@ from aiochsa import types as t
                     t.NullableType(t.NothingType()),
                 ),
             )
-        )
+        ),
+        (
+            'SimpleAggregateFunction(max, UInt32)',
+            t.SimpleAggregateFunction(t.IntType())
+        ),
     ],
 )
 def test_parse_type(type_str, type_obj):

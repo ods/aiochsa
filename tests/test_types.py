@@ -14,7 +14,7 @@ from clickhouse_sqlalchemy import types as t
 import aiochsa
 from aiochsa.types import (
     ArrayType, BaseType, DateTimeUTCType, IntType, LowCardinalityType,
-    NullableType, StrType, TupleType, TypeRegistry,
+    NullableType, SimpleAggregateFunction, StrType, TupleType, TypeRegistry,
 )
 
 
@@ -273,7 +273,8 @@ def test_eq_simple(type_class):
 
 
 @pytest.mark.parametrize(
-    'type_class', [ArrayType, NullableType, LowCardinalityType],
+    'type_class',
+    [ArrayType, NullableType, LowCardinalityType, SimpleAggregateFunction],
 )
 def test_eq_wrapping(type_class):
     type_obj = type_class(StrType())
