@@ -246,6 +246,16 @@ async def test_datetime_utc_insert_naive(conn_utc, table_for_type):
         )
 
 
+@pytest.mark.parametrize('value', [0, 4294967295])
+async def test_simple_aggregate_function(conn, recreate_table_for_type, value):
+    table_name = await recreate_table_for_type(
+        'SimpleAggregateFunction(max, "UInt32")'
+    )
+    await conn.execute(f'INSERT INTO {table_name} VALUES ({value})')
+    result = await conn.fetchval(f'SELECT value FROM {table_name}')
+    assert result == value
+
+
 # Parser tests would be meaningless if something is wrong with `__eq__`, so
 # it's better to insure it works.
 

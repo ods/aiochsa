@@ -110,18 +110,28 @@ ENGINE = Log()
 
 
 @pytest.fixture
-def table_for_type(recreate_table):
+def recreate_table_for_type(recreate_table):
+
+    async def _recreate(type_str):
+        create_ddl = TABLE_FOR_TYPE_DDL_TEMPLATE.format(type=type_str)
+        await recreate_table('test_for_type', create_ddl)
+        return 'test_for_type'
+
+    return _recreate
+
+
+@pytest.fixture
+def table_for_type(recreate_table_for_type):
 
     async def _create(sa_type):
         if isinstance(sa_type, type):
             sa_type = sa_type()
         type_str = sa_type.compile(dialect=ClickhouseSaDialect())
 
-        create_ddl = TABLE_FOR_TYPE_DDL_TEMPLATE.format(type=type_str)
-        await recreate_table('test_for_type', create_ddl)
+        table_name = await recreate_table_for_type(type_str)
 
         return sa.Table(
-            'test_for_type', sa.MetaData(),
+            table_name, sa.MetaData(),
             sa.Column('value', sa_type),
         )
 
