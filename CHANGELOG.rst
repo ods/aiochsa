@@ -1,12 +1,13 @@
 Change Log
 ==========
 
-0.6 (?)
+0.6 (2019-12-09)
 ----------------
 
 * Patch compiler from ``clickhouse_sqlalchemy`` in subclass instead of
   depending on fork (that caused problems when installing from PyPI)
 * Add support for ``SimpleAggregateFunction()`` types
+* Compatibility with Python 3.8
 
 
 0.5 (2019-11-12)
