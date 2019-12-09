@@ -1,12 +1,14 @@
 start: _type
 
-_type: composite_type | simple_type
+_type: composite_type | aggregate_type | simple_type
 composite_type: COMPOSITE_NAME "(" _type ("," _type)* ")"
+aggregate_type: AGGREGATE_NAME "(" SIMPLE_NAME "," _type ")"
 simple_type: SIMPLE_NAME [params]
 params: "(" PARAM ("," PARAM)* ")"
 
 COMPOSITE_NAME: /Tuple|Array|Nullable|LowCardinality/
-SIMPLE_NAME: /(?!Tuple|Array|Nullable|LowCardinality)\w+/
+AGGREGATE_NAME: /AggregateFunction|SimpleAggregateFunction/
+SIMPLE_NAME: /(?!Tuple|Array|Nullable|LowCardinality|AggregateFunction|SimpleAggregateFunction)\w+/
 PARAM: /('([^\\']|\\.)*'\s*=\s)?-?\d+/
 
 %ignore /[ \t\f\r\n]+/ // whitespace

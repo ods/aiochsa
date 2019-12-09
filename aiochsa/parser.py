@@ -31,6 +31,9 @@ class TypeTransformer(Transformer):
     def composite_type(self, name, *types):
         return self._types[name](*types)
 
+    def aggregate_type(self, name, func, type_):
+        return self._types[name](type_)
+
     def simple_type(self, name, *params):
         return self._types[name]()
 

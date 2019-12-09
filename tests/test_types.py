@@ -13,8 +13,8 @@ from clickhouse_sqlalchemy import types as t
 
 import aiochsa
 from aiochsa.types import (
-    ArrayType, BaseType, DateTimeUTCType, IntType, LowCardinalityType,
-    NullableType, StrType, TupleType, TypeRegistry,
+    ArrayType, BaseType, DateTimeUTCType, IntType, NullableType, ProxyType,
+    StrType, TupleType, TypeRegistry,
 )
 
 
@@ -246,6 +246,16 @@ async def test_datetime_utc_insert_naive(conn_utc, table_for_type):
         )
 
 
+@pytest.mark.parametrize('value', [0, 4294967295])
+async def test_simple_aggregate_function(conn, recreate_table_for_type, value):
+    table_name = await recreate_table_for_type(
+        'SimpleAggregateFunction(max, "UInt32")'
+    )
+    await conn.execute(f'INSERT INTO {table_name} VALUES ({value})')
+    result = await conn.fetchval(f'SELECT value FROM {table_name}')
+    assert result == value
+
+
 # Parser tests would be meaningless if something is wrong with `__eq__`, so
 # it's better to insure it works.
 
@@ -255,7 +265,8 @@ def _get_all_subclasses(cls):
         yield from _get_all_subclasses(subcls)
 
 SIMPLE_TYPE_CLASSES = [
-    cls for cls in _get_all_subclasses(BaseType) if not cls.__slots__
+    cls for cls in _get_all_subclasses(BaseType)
+    if not cls.__slots__ and not issubclass(cls, ProxyType)
 ]
 
 
@@ -273,7 +284,8 @@ def test_eq_simple(type_class):
 
 
 @pytest.mark.parametrize(
-    'type_class', [ArrayType, NullableType, LowCardinalityType],
+    'type_class',
+    [ArrayType, NullableType],
 )
 def test_eq_wrapping(type_class):
     type_obj = type_class(StrType())

@@ -31,11 +31,9 @@ from aiochsa import types as t
         ('IPv6', t.IPv6Type()),
         ('Nothing', t.NothingType()),
         ('Nullable(Nothing)', t.NullableType(t.NothingType())),
-        ('LowCardinality(String)', t.LowCardinalityType(t.StrType())),
-        (
-            'LowCardinality(Nullable(String))',
-            t.LowCardinalityType(t.NullableType(t.StrType()))
-        ),
+        ('LowCardinality(String)', t.StrType()),
+        ('LowCardinality(Nullable(String))', t.NullableType(t.StrType())),
+        ('SimpleAggregateFunction(max, UInt32)', t.IntType()),
         ('Tuple(Int8, String)', t.TupleType(t.IntType(), t.StrType())),
         ('Array(String)', t.ArrayType(t.StrType())),
         (
@@ -65,7 +63,7 @@ from aiochsa import types as t
                     t.NullableType(t.NothingType()),
                 ),
             )
-        )
+        ),
     ],
 )
 def test_parse_type(type_str, type_obj):
