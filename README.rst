@@ -31,6 +31,10 @@ Example
         )
 
 
+To add ``FINAL`` modifier use ``with_hint(table, 'FINAL')``
+(see `SQLAlchemy docs for details <https://docs.sqlalchemy.org/en/13/core/selectable.html?highlight=with_hint#sqlalchemy.sql.expression.Select.with_hint>`_).
+
+
 Custom type converters
 ----------------------
 
