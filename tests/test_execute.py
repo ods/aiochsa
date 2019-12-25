@@ -287,6 +287,19 @@ async def test_select_params_args(conn, table_test1):
     assert [item_id for (item_id,) in rows] == [2, 3]
 
 
+async def test_final_hint(conn, table_test3):
+    await conn.execute(
+        table_test3.insert(),
+        *[{'key': 123, 'value': i} for i in range(10)]
+    )
+    rows = await conn.fetch(
+        table_test3.select()
+            .with_hint(table_test3, 'FINAL')
+    )
+    assert len(rows) == 1
+    assert rows[0]['value'] == 45
+
+
 async def test_nested_structures(conn):
     value = await conn.fetchval(
         r"SELECT ("

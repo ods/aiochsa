@@ -9,6 +9,9 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
 
     _clickhouse_json_each_row = False
 
+    def get_from_hint_text(self, table, text):
+        return text
+
     def visit_column(self, *args, **kwargs):
         # Jump over method redefined by clickhouse_sqlalchemy. See
         # https://github.com/xzkostyan/clickhouse-sqlalchemy/issues/35#issuecomment-508902572
