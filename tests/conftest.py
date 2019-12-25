@@ -100,6 +100,28 @@ async def table_test2(recreate_table):
     )
 
 
+TEST3_CREATE_DDL = '''\
+CREATE TABLE test3
+(
+    key UInt8,
+    value UInt64
+)
+ENGINE = SummingMergeTree()
+ORDER BY key
+'''
+
+
+@pytest.fixture
+async def table_test3(recreate_table):
+    await recreate_table('test3', TEST3_CREATE_DDL)
+
+    return sa.Table(
+        'test3', sa.MetaData(),
+        sa.Column('key', sa.Integer),
+        sa.Column('value', sa.Integer),
+    )
+
+
 TABLE_FOR_TYPE_DDL_TEMPLATE = '''\
 CREATE TABLE test_for_type
 (
