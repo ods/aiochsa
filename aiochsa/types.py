@@ -267,6 +267,29 @@ class NullableType(BaseType):
         return self._item_type.from_json(value)
 
 
+class AggregateFunction:
+
+    def __init__(self, value):
+        self.value = value
+
+    def __repr__(self):
+        return f'<AggregateFunction (did you forget to complete aggregation?)>'
+
+
+class AggregateFunctionType(BaseType):
+    __slots__ = ('_item_type',)
+
+    def __init__(self, item_type):
+        self._item_type = item_type
+
+    @classmethod
+    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
+        raise RuntimeError('Must be never called')  # pragma: nocover
+
+    def from_json(self, value: JsonType) -> AggregateFunction:
+        return AggregateFunction(value)
+
+
 DEFAULT_CONVERTES = [
     (StrType, ['String', 'Enum8', 'Enum16'], str),
     (StrStripZerosType, ['FixedString']),
@@ -290,6 +313,7 @@ DEFAULT_CONVERTES = [
     (ArrayType, ['Array'], list),
     (NullableType, ['Nullable']),
     (ProxyType, ['LowCardinality', 'SimpleAggregateFunction']),
+    (AggregateFunctionType, ['AggregateFunction']),
 ]
 
 
