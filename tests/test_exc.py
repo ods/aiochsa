@@ -16,7 +16,10 @@ async def test_exc(conn):
 
 
 @pytest.mark.parametrize(
-    'statement', ['ERROR', 'ERROR ' * 1000],
+    'statement', [
+        'ERROR',
+        pytest.param('ERROR ' * 1000, id='ERROR ...'),
+    ],
 )
 async def test_exc_stacktrace(dsn, statement):
     async with aiochsa.connect(dsn, stacktrace=1) as conn:
