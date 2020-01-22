@@ -273,7 +273,7 @@ class AggregateFunction:
         self.value = value
 
     def __repr__(self):
-        return f'<AggregateFunction (did you forget to complete aggregation?)>'
+        return f'<AggregateFunction (did you forget to finalize aggregation?)>'
 
 
 class AggregateFunctionType(BaseType):

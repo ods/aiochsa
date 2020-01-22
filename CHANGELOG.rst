@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+0.8 (2020-01-22)
+----------------
+
+* Basic support for AggregateFunction with gentle reminder that you probably
+  forget to use ``finalizeAggregation()`` or one of ``*Merge()`` functions
+* ``aiochsa.__version__``
+
+
 0.7 (2019-12-25)
 ----------------
 
