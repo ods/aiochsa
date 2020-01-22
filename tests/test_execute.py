@@ -5,6 +5,8 @@ from enum import Enum
 import pytest
 import sqlalchemy as sa
 
+import aiochsa
+
 
 async def test_ddl(conn, table_test1):
     await conn.execute(sa.DDL(f'DROP TABLE {table_test1.name}'))
@@ -298,6 +300,18 @@ async def test_final_hint(conn, table_test3):
     )
     assert len(rows) == 1
     assert rows[0]['value'] == 45
+
+
+async def test_aggregate_function(conn, table_test4):
+    await conn.execute('INSERT INTO test4 SELECT 1, sumState(123)')
+    value = await conn.fetchval(
+        sa.select([table_test4.c.value])
+    )
+    assert isinstance(value, aiochsa.types.AggregateFunction)
+    value = await conn.fetchval(
+        sa.select([sa.func.sumMerge(table_test4.c.value)])
+    )
+    assert value == 123
 
 
 async def test_nested_structures(conn):
