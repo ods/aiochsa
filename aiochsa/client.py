@@ -1,3 +1,4 @@
+import logging
 import simplejson as json
 from typing import Any, AsyncGenerator, Iterable, List, Optional
 
@@ -9,6 +10,9 @@ from .exc import DBException
 from .parser import parse_json_compact
 from .record import Record
 from .types import TypeRegistry
+
+
+sql_logger = logging.getLogger(f'{__name__}.SQL')
 
 
 class Client:
@@ -52,6 +56,7 @@ class Client:
                 )
                 for row in json_each_row_parameters
             )
+        sql_logger.debug(query)
 
         async with self._session.post(
             self.url,
