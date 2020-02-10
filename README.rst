@@ -1,7 +1,7 @@
 aiochsa
 =======
 
-An experimental Clickhouse Python/asyncio library for use with SQLAlchemy core
+Clickhouse Python/asyncio library for use with SQLAlchemy core
 
 
 Example
@@ -33,6 +33,12 @@ Example
 
 To add ``FINAL`` modifier use ``with_hint(table, 'FINAL')``
 (see `SQLAlchemy docs for details <https://docs.sqlalchemy.org/en/13/core/selectable.html?highlight=with_hint#sqlalchemy.sql.expression.Select.with_hint>`_).
+
+Configure logging to show SQL:
+
+.. code-block:: python
+
+    logging.getLogger('aiochsa.client.SQL').setLevel(logging.DEBUG)
 
 
 Custom type converters

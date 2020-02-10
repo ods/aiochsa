@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+0.9 (2020-02-10)
+----------------
+
+* Retry query if it failed due to broken connection or session state
+* Wrap all protocol-related errors into ``ProtocolError``
+* Log SQL queries (separate logger is used for flexibility)
+
+
 0.8 (2020-01-22)
 ----------------
 

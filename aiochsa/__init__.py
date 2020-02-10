@@ -1,7 +1,7 @@
 from pkg_resources import get_distribution, DistributionNotFound
 
 from .client import Client
-from .exc import DBException
+from .exc import DBException, ProtocolError
 from .pool import connect, create_pool
 
 try:
