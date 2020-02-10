@@ -1,20 +1,25 @@
+import logging
 import simplejson as json
 from typing import Any, AsyncGenerator, Iterable, List, Optional
 
-from aiohttp import ClientSession
+import aiohttp
 
 from .compiler import Compiler
 from .dialect import ClickhouseSaDialect
-from .exc import DBException
+from .exc import DBException, ProtocolError
 from .parser import parse_json_compact
 from .record import Record
 from .types import TypeRegistry
 
 
+logger = logging.getLogger(__name__)
+sql_logger = logging.getLogger(f'{__name__}.SQL')
+
+
 class Client:
 
     def __init__(
-        self, session: ClientSession, *, url='http://localhost:8123/',
+        self, session: aiohttp.ClientSession, *, url='http://localhost:8123/',
         user=None, password=None, database='default', compress_response=False,
         dialect=None, types=None, **settings,
     ):
@@ -52,22 +57,33 @@ class Client:
                 )
                 for row in json_each_row_parameters
             )
+        sql_logger.debug(query)
 
-        async with self._session.post(
-            self.url,
-            params = {'default_format': 'JSONCompact', **self.params},
-            data = query.encode(),
-        ) as response:
-            if response.status != 200:
-                body = await response.read()
-                raise DBException.from_message(
-                    query, body.decode(errors='replace'),
-                )
+        # First attempt may fail due to broken state of aiohttp session
+        # (aiohttp doesn't handle connection closing properly?)
+        for retrying in [False, True]:
+            try:
+                async with self._session.post(
+                    self.url,
+                    params = {'default_format': 'JSONCompact', **self.params},
+                    data = query.encode(),
+                ) as response:
+                    if response.status != 200:
+                        body = await response.read()
+                        raise DBException.from_message(
+                            query, body.decode(errors='replace'),
+                        )
 
-            if response.content_type == 'application/json':
-                return await parse_json_compact(self._types, response.content)
-            else:
-                return ()
+                    if response.content_type == 'application/json':
+                        return await parse_json_compact(
+                            self._types, response.content,
+                        )
+                    else:
+                        return ()
+            except aiohttp.ClientError as exc:
+                if retrying:
+                    raise ProtocolError(exc) from exc
+                logger.debug(f'First attempt failed, retrying (error: {exc})')
 
     async def iterate(
         self, statement: str, *args,
