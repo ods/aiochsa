@@ -11,7 +11,16 @@ _match_exc_message = re.compile(
 ).match
 
 
-class DBException(Exception):
+class AiochsaException(Exception):
+    """ Base class for aiochsa exceptions """
+
+
+class ProtocolError(AiochsaException):
+    """ Error communicating to Clickhouse server """
+
+
+class DBException(AiochsaException):
+    """ Error returned from Clickhouse database """
 
     def __init__(self, statement, code, display_text, stack_trace=None):
         super().__init__(statement, code, display_text, stack_trace)
