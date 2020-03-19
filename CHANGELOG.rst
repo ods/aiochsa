@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+0.9.1 (2020-03-19)
+------------------
+
+* Fix DBException message parser for Clickhouse 20.3
+* Fix Decimal64 support for Clickhouse 20.1.2.4
+
+
 0.9 (2020-02-10)
 ----------------
 
