@@ -6,7 +6,7 @@ import re
 _match_exc_message = re.compile(
     r'^Code: (?P<code>\d+), '
         r'e\.displayText\(\) = (?P<display_text>.+?)'
-        r'(?:, Stack trace:\s+(?P<stack_trace>.+))?$',
+        r'(?:, Stack trace[^:]*:\s+(?P<stack_trace>.+))?$',
     re.M,
 ).match
 
