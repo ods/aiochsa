@@ -63,9 +63,10 @@ async def test_simple_round(conn, table_test1):
     )
 
     rows = await conn.fetch(table_test1.select())
-    row = await conn.fetchrow(table_test1.select())
-    assert rows == [row]
-    assert row == values
+    row1 = await conn.fetchrow(table_test1.select())
+    row2 = await conn.fetchrow(f'SELECT * from {table_test1.name}')
+    assert rows == [row1]
+    assert row1 == row2 == values
 
 
 async def test_non_ascii(conn, table_test1):

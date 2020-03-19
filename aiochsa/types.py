@@ -302,7 +302,9 @@ DEFAULT_CONVERTES = [
         [int, bool],
     ),
     (FloatType, ['Float32', 'Float64'], float),
-    (DecimalType, ['Decimal'], Decimal),
+    # It looks like Decimal32/Decimal64/Decimal128 were used for some period
+    # (reproducable with Clickhouse 20.1.2.4)
+    (DecimalType, ['Decimal', 'Decimal32', 'Decimal64', 'Decimal128'], Decimal),
     (DateType, ['Date'], date),
     (DateTimeType, ['DateTime'], datetime),
     (UUIDType, ['UUID'], UUID),
