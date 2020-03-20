@@ -16,6 +16,12 @@ def pytest_collection_modifyitems(items):
             item.add_marker('asyncio')
 
 
+
+@pytest.fixture(autouse=True)
+def event_loop_set_debug(event_loop):
+    event_loop.set_debug(True)
+
+
 @pytest.fixture(scope='session')
 def dsn(docker_services):
     docker_services.start('clickhouse-server')

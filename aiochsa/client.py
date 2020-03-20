@@ -1,3 +1,4 @@
+import io
 import logging
 import simplejson as json
 from typing import Any, AsyncGenerator, Iterable, List, Optional
@@ -13,10 +14,15 @@ from .types import TypeRegistry
 
 
 logger = logging.getLogger(__name__)
+
 sql_logger = logging.getLogger(f'{__name__}.SQL')
+# Don't log SQL by default even if level matches
+sql_logger.setLevel(logging.WARNING)
 
 
 class Client:
+
+    ROWS_IN_CHUNK = 500
 
     def __init__(
         self, session: aiohttp.ClientSession, *, url='http://localhost:8123/',
@@ -43,21 +49,35 @@ class Client:
         self._types = types
         self._compiler = Compiler(dialect=dialect, escape=types.escape)
 
+    async def _json_each_row_chunks(self, rows):
+        to_json = self._types.to_json # lookup optimization
+        start = 0
+        length = len(rows)
+        while start < length:
+            end = start + self.ROWS_IN_CHUNK
+            chunk = '\n'.join(
+                json.dumps(
+                    {name: to_json(value) for name, value in row.items()},
+                    use_decimal=True, ensure_ascii=False,
+                )
+                for row in rows[start:end]
+            )
+            yield chunk
+            start = end
+
     async def _execute(self, statement: str, *args) -> Iterable[Record]:
         query, json_each_row_parameters = self._compiler.compile_statement(
             statement, args,
         )
+        sql_logger.info(query)
+
+        payload = [query]
         if json_each_row_parameters:
-            to_json = self._types.to_json # lookup optimization
-            query += '\n'
-            query += '\n'.join(
-                json.dumps(
-                    {name: to_json(value) for name, value in row.items()},
-                    use_decimal=True,
-                )
-                for row in json_each_row_parameters
-            )
-        sql_logger.debug(query)
+            async for chunk in self._json_each_row_chunks(
+                json_each_row_parameters
+            ):
+                sql_logger.debug(chunk)
+                payload.append(chunk)
 
         # First attempt may fail due to broken state of aiohttp session
         # (aiohttp doesn't handle connection closing properly?)
@@ -66,7 +86,7 @@ class Client:
                 async with self._session.post(
                     self.url,
                     params = {'default_format': 'JSONCompact', **self.params},
-                    data = query.encode(),
+                    data = io.BytesIO('\n'.join(payload).encode()),
                 ) as response:
                     if response.status != 200:
                         body = await response.read()

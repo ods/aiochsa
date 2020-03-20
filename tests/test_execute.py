@@ -153,7 +153,7 @@ async def test_insert_multiple(conn, table_test1):
 async def test_insert_multiple_args(conn, table_test1):
     values = [
         {'id': i + 1, 'name': f'test{i + 1}'}
-        for i in range(3)
+        for i in range(100000)
     ]
     await conn.execute(
         table_test1.insert(), *values,
