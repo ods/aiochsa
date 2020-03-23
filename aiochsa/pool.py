@@ -54,10 +54,10 @@ class Pool:
     async def __aexit__(self, exc_type, exc_val, exc_tb):
         await self.close()
 
-    def acquire(self):
+    def acquire(self, *, timeout=None):
         return self._client
 
-    async def release(self, conn):
+    async def release(self, conn, *, timeout=None):
         pass
 
     async def iterate(self, *args, **kwargs):

@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+0.9.2 (2020-03-23)
+------------------
+
+* Add ``timeout`` parameter to ``Pool.acquire()`` and ``Pool.release()``
+  methods for interface compatibility with other drivers (like asyncpg)
+
+
 0.9.1 (2020-03-19)
 ------------------
 
