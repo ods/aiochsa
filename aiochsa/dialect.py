@@ -12,11 +12,6 @@ class ClickhouseSaSQLCompiler(ClickHouseCompiler):
     def get_from_hint_text(self, table, text):
         return text
 
-    def visit_column(self, *args, **kwargs):
-        # Jump over method redefined by clickhouse_sqlalchemy. See
-        # https://github.com/xzkostyan/clickhouse-sqlalchemy/issues/35#issuecomment-508902572
-        return SQLCompiler.visit_column(self, *args, **kwargs)
-
     def visit_insert(self, insert_stmt, asfrom=False, **kw):
         assert not self.stack # INSERT only at top level
 
