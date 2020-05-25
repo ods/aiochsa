@@ -303,6 +303,35 @@ async def test_final_hint(conn, table_test3):
     assert rows[0]['value'] == 45
 
 
+@pytest.mark.parametrize('alised', [False, True])
+async def test_join_final_hint(conn, table_test1, table_test3, alised):
+    await conn.execute(
+        table_test1.insert(),
+        {'id': 12, 'name': 'name12'},
+        {'id': 23, 'name': 'name23'},
+    )
+    await conn.execute(
+        table_test3.insert(),
+        *[{'key': 12, 'value': i} for i in range(10)]
+    )
+
+    if alised:
+        table_test3 = table_test3.alias()
+    query = (
+        sa.select([table_test1.c.name, table_test3.c.value])
+            .select_from(
+                table_test3.join(
+                    table_test1,
+                    table_test1.c.id == sa.func.toUInt64(table_test3.c.key),
+                )
+            )
+            .with_hint(table_test3, 'FINAL')
+    )
+    rows = await conn.fetch(query)
+    assert len(rows) == 1
+    assert rows[0]['name'] == 'name12'
+
+
 async def test_aggregate_function(conn, table_test4):
     await conn.execute('INSERT INTO test4 SELECT 1, sumState(123)')
     value = await conn.fetchval(
