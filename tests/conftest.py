@@ -2,6 +2,7 @@ import asyncio
 from datetime import datetime
 from decimal import Decimal
 
+import clickhouse_sqlalchemy
 import pytest
 import sqlalchemy as sa
 
@@ -180,3 +181,12 @@ def table_for_type(recreate_table_for_type):
         )
 
     return _create
+
+
+@pytest.fixture(params=[
+    sa.select,
+    clickhouse_sqlalchemy.select,
+    aiochsa.select,
+])
+def any_select(request):
+    return request.param
