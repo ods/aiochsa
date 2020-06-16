@@ -4,12 +4,33 @@ from sqlalchemy import exc
 from sqlalchemy.sql import crud
 from sqlalchemy.sql.compiler import SQLCompiler
 
+from .sql import _ORDER_BY_SENTINEL
+
 
 class ClickhouseSaSQLCompiler(ClickHouseCompiler):
 
     _clickhouse_json_each_row = False
 
     def get_from_hint_text(self, table, text):
+        return text
+
+    def order_by_clause(self, select, **kw):
+        text = ''
+        if select._order_by_clause is not _ORDER_BY_SENTINEL:
+            text = super().order_by_clause(select, **kw)
+
+        # Hack to add LIMIT BY clause
+        limit_by_clause = getattr(select, '_limit_by_clause', None)
+        if limit_by_clause is not None and limit_by_clause.clauses.clauses:
+            text += ' LIMIT '
+            if limit_by_clause.offset is not None:
+                text += f'{self.process(limit_by_clause.offset, **kw)}, '
+            text += self.process(limit_by_clause.limit, **kw)
+            limit_by_exprs = limit_by_clause.clauses._compiler_dispatch(
+                self, **kw,
+            )
+            text += f' BY {limit_by_exprs}'
+
         return text
 
     def visit_insert(self, insert_stmt, asfrom=False, **kw):
