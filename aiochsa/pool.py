@@ -38,7 +38,7 @@ class Pool:
     DEFAULT_TIMEOUT = {
         'total': 5*60,
         'connect': None,
-        'sock_read': 10,
+        'sock_read': None,
         'sock_connect': 10,
     }
 
