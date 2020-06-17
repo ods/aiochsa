@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+0.10.0 (2020-06-17)
+-------------------
+
+* Add support for ``LIMIT BY`` clause
+* Add support for parameters in DSN
+* Add ``session_timeout`` parameter to ``connect``
+
+
 0.9.2 (2020-03-23)
 ------------------
 
