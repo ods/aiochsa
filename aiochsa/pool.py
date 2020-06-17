@@ -1,7 +1,7 @@
-import asyncio
-from urllib.parse import urlsplit, urlunsplit
+from typing import Optional, Union
+from urllib.parse import parse_qsl, urlsplit, urlunsplit
 
-from aiohttp.client import ClientSession
+from aiohttp.client import ClientSession, ClientTimeout
 
 from .client import Client
 
@@ -22,9 +22,10 @@ def dsn_to_params(dsn):
     if not database:
         database = 'default'
 
-    # XXX Parse parameters from query?
+    params = dict(parse_qsl(parsed.query))
 
     return {
+        **params,
         'url': urlunsplit(('http', netloc, '', '', '')),
         'database': database,
         'user': parsed.username,
@@ -34,9 +35,26 @@ def dsn_to_params(dsn):
 
 class Pool:
 
-    def __init__(self, dsn, client_class=Client, **params):
-        # TODO Session and connector parameters
-        self._session = ClientSession()
+    DEFAULT_TIMEOUT = {
+        'total': 5*60,
+        'connect': None,
+        'sock_read': 10,
+        'sock_connect': 10,
+    }
+
+    def __init__(
+        self, dsn, session_class=ClientSession,
+        session_timeout: Optional[Union[float, int, dict]] = None,
+        client_class=Client, **params,
+    ):
+        timeout_params = self.DEFAULT_TIMEOUT.copy()
+        if isinstance(session_timeout, dict):
+            timeout_params.update(session_timeout)
+        else:
+            timeout_params['total'] = session_timeout
+        self._session = session_class(
+            timeout=ClientTimeout(**timeout_params)
+        )
         params.update(dsn_to_params(dsn))
         self._client = client_class(self._session, **params)
 
