@@ -1,10 +1,14 @@
 from types import SimpleNamespace
+from typing import Union
 
 from sqlalchemy.engine.util import _distill_params
 from sqlalchemy.sql import func, ClauseElement
 from sqlalchemy.sql.ddl import DDLElement
 from sqlalchemy.sql.dml import Insert
 from sqlalchemy.sql.functions import FunctionElement
+
+
+Statement = Union[str, ClauseElement]
 
 
 class Compiler:
@@ -91,7 +95,7 @@ class Compiler:
             return context.statement % escaped, ()
 
 
-    def compile_statement(self, statement, args):
+    def compile_statement(self, statement: Statement, args):
         if isinstance(statement, str):
             assert not args
             return statement, args

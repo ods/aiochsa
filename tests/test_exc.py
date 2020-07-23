@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 import pytest
 
 import aiochsa
@@ -33,3 +35,13 @@ async def test_exc_stacktrace(dsn, statement):
     assert str(error_codes.SYNTAX_ERROR) in str(exc_info.value)
     assert 'Syntax error' in str(exc_info.value)
     assert len(str(exc_info.value)) < 2000
+
+
+async def test_exc_row(conn, table_test1):
+    with pytest.raises(aiochsa.DBException) as exc_info:
+        await conn.execute(
+            table_test1.insert(),
+            {'amount': Decimal('1234567890.1234567890')},
+        )
+    assert exc_info.value.code == error_codes.ARGUMENT_OUT_OF_BOUND
+    assert exc_info.value.row == '{"amount": 1234567890.1234567890}'

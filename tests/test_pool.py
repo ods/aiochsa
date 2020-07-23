@@ -1,7 +1,7 @@
 import asyncio
 import pytest
 
-from aiochsa import DBException
+from aiochsa import DBException, error_codes
 from aiochsa.pool import dsn_to_params, create_pool
 
 
@@ -43,20 +43,25 @@ async def test_pool_acquire_release(pool):
     await pool.release(conn)
 
 
+LONG_QUERY = 'SELECT sleep(1) FROM numbers(10) SETTINGS max_block_size=1'
+
+
 async def test_pool_params(dsn):
     async with create_pool(dsn, max_execution_time=1) as conn:
-        with pytest.raises(DBException):
-            await conn.execute('SELECT sleep(3)')
+        with pytest.raises(DBException) as exc_info:
+            await conn.execute(LONG_QUERY)
+    assert exc_info.value.code == error_codes.TIMEOUT_EXCEEDED
 
 
 async def test_pool_dsn_params(dsn):
     dsn += '?max_execution_time=1'
     async with create_pool(dsn) as conn:
-        with pytest.raises(DBException):
-            await conn.execute('SELECT sleep(3)')
+        with pytest.raises(DBException) as exc_info:
+            await conn.execute(LONG_QUERY)
+    assert exc_info.value.code == error_codes.TIMEOUT_EXCEEDED
 
 
 async def test_session_timeout(dsn):
     async with create_pool(dsn, session_timeout=0.1) as conn:
         with pytest.raises(asyncio.TimeoutError):
-            await conn.execute('SELECT sleep(1)')
+            await conn.execute(LONG_QUERY)
