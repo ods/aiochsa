@@ -1,16 +1,18 @@
-import asyncio
 import pkgutil
 import simplejson as json
-from typing import AsyncGenerator, Iterable, Union
+from typing import Iterable
 
-import aiohttp
 from lark import Lark, Transformer, v_args
 
 from .record import Record
 from .types import TypeRegistry
 
 
-__all__ = ['parse_type']
+__all__ = ['parse_type', 'parse_json_compact', 'JSONDecodeError']
+
+
+# Re-export
+JSONDecodeError = json.JSONDecodeError
 
 
 type_parser = Lark(
@@ -43,19 +45,18 @@ def parse_type(types: TypeRegistry, type_str):
     return TypeTransformer(types).transform(tree)
 
 
-async def parse_json_compact(
-    types: TypeRegistry,
-    content: Union[asyncio.StreamReader, aiohttp.StreamReader],
+def parse_json_compact(
+    types: TypeRegistry, content: bytes,
 ) -> Iterable[Record]:
     # The method is split into three phases:
-    #   1. Read whole response.  It's done immediately after await-ing, so we
-    #      can close response after it.
+    #   1. Parse JSON.  It's done immediately, so that we can fall back to
+    #      parsing exception when it breaks normal response.
     #   2. Parse type information from meta.  It's done at first iteration of
-    #      returned async-generator.
+    #      returned generator.
     #   3. Convert each row one-by-one.  It's done on demand at each iteration.
     # This way we can cleanup resources even when result is not used.
 
-    json_data = json.loads(await content.read(), parse_float=str)
+    json_data = json.loads(content, parse_float=str)
     return convert_json_compact(types, json_data)
 
 

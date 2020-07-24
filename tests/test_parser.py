@@ -74,7 +74,7 @@ def test_parse_type(type_str, type_obj):
 
 async def test_parse_json_compact_decimal():
     """ Insure Decimal is parsed without loss of precision """
-    json_data = b'''\
+    content = b'''\
         {
             "meta": [
                 {"name": "column", "type": "Decimal(18, 13)"}
@@ -84,10 +84,6 @@ async def test_parse_json_compact_decimal():
             ]
         }
     '''
-    content = asyncio.StreamReader()
-    content.feed_data(json_data)
-    content.feed_eof()
-
-    [[value]] = list(await parse_json_compact(t.TypeRegistry(), content))
+    [[value]] = list(parse_json_compact(t.TypeRegistry(), content))
     assert isinstance(value, Decimal)
     assert str(value) == '1.2345678901230'

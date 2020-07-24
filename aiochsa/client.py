@@ -4,10 +4,10 @@ from typing import Any, AsyncGenerator, Iterable, List, Optional
 
 import aiohttp
 
-from .compiler import Compiler
+from .compiler import Compiler, Statement
 from .dialect import ClickhouseSaDialect
-from .exc import DBException, ProtocolError
-from .parser import parse_json_compact
+from .exc import DBException, ProtocolError, exc_message_re
+from .parser import parse_json_compact, JSONDecodeError
 from .record import Record
 from .types import TypeRegistry
 
@@ -43,21 +43,26 @@ class Client:
         self._types = types
         self._compiler = Compiler(dialect=dialect, escape=types.escape)
 
-    async def _execute(self, statement: str, *args) -> Iterable[Record]:
-        query, json_each_row_parameters = self._compiler.compile_statement(
+    async def _execute(self, statement: Statement, *args) -> Iterable[Record]:
+        compiled, json_each_row_parameters = self._compiler.compile_statement(
             statement, args,
         )
+        sql_logger.debug(compiled)
+        compiled_with_params = compiled
+        rows = None
         if json_each_row_parameters:
             to_json = self._types.to_json # lookup optimization
-            query += '\n'
-            query += '\n'.join(
+            rows = [
                 json.dumps(
                     {name: to_json(value) for name, value in row.items()},
                     use_decimal=True,
                 )
                 for row in json_each_row_parameters
-            )
-        sql_logger.debug(query)
+            ]
+            if sql_logger.isEnabledFor(logging.DEBUG):
+                for idx, row in enumerate(rows):
+                    sql_logger.debug(f'{idx}: {row}')
+            compiled_with_params += '\n' + '\n'.join(rows)
 
         # First attempt may fail due to broken state of aiohttp session
         # (aiohttp doesn't handle connection closing properly?)
@@ -66,18 +71,27 @@ class Client:
                 async with self._session.post(
                     self.url,
                     params = {'default_format': 'JSONCompact', **self.params},
-                    data = query.encode(),
+                    data = compiled_with_params.encode(),
                 ) as response:
+                    body = await response.read()
                     if response.status != 200:
-                        body = await response.read()
                         raise DBException.from_message(
-                            query, body.decode(errors='replace'),
+                            body.decode(errors='replace'),
+                            statement=compiled, rows=rows,
                         )
 
-                    if response.content_type == 'application/json':
-                        return await parse_json_compact(
-                            self._types, response.content,
-                        )
+                    elif response.content_type == 'application/json':
+                        try:
+                            return parse_json_compact(self._types, body)
+                        except JSONDecodeError:
+                            body_str = body.decode(errors='replace')
+                            m = exc_message_re.search(body_str)
+                            if not m:
+                                raise
+                            raise DBException.from_message(
+                                body_str[m.start():],
+                                statement=compiled, rows=rows,
+                            )
                     else:
                         return ()
             except aiohttp.ClientError as exc:
@@ -86,22 +100,22 @@ class Client:
                 logger.debug(f'First attempt failed, retrying (error: {exc})')
 
     async def iterate(
-        self, statement: str, *args,
+        self, statement: Statement, *args,
     ) -> AsyncGenerator[Record, None]:
         for row in await self._execute(statement, *args):
             yield row
 
-    async def execute(self, statement: str, *args) -> None:
+    async def execute(self, statement: Statement, *args) -> None:
         await self._execute(statement, *args)
 
-    async def fetch(self, statement: str, *args) -> List[Record]:
+    async def fetch(self, statement: Statement, *args) -> List[Record]:
         return list(await self._execute(statement, *args))
 
-    async def fetchrow(self, statement: str, *args) -> Optional[Record]:
+    async def fetchrow(self, statement: Statement, *args) -> Optional[Record]:
         gen = await self._execute(statement, *args)
         return next(iter(gen), None)
 
-    async def fetchval(self, statement: str, *args) -> Any:
+    async def fetchval(self, statement: Statement, *args) -> Any:
         row = await self.fetchrow(statement, *args)
         if row is not None:
             return row[0]
