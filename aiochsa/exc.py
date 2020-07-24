@@ -1,3 +1,4 @@
+from collections import namedtuple
 import re
 
 
@@ -10,7 +11,7 @@ exc_message_re = re.compile(
     re.M,
 )
 
-at_row_re = re.compile(r'[(]at row (?P<row>\d+)[)]')
+at_row_re = re.compile(r'[(]at row (?P<num>\d+)[)]')
 
 class AiochsaException(Exception):
     """ Base class for aiochsa exceptions """
@@ -18,6 +19,9 @@ class AiochsaException(Exception):
 
 class ProtocolError(AiochsaException):
     """ Error communicating to Clickhouse server """
+
+
+RowInfo = namedtuple('RowInfo', ['num', 'content'])
 
 
 class DBException(AiochsaException):
@@ -41,7 +45,7 @@ class DBException(AiochsaException):
                 statement = statement[:200] + '...'
             message += f'\n{statement}'
         if self.row:
-            message += f'\n{self.row}'
+            message += f'\n{self.row.num}: {self.row.content}'
         return message
 
     @classmethod
@@ -55,9 +59,9 @@ class DBException(AiochsaException):
                 at_row_m = at_row_re.search(display_text)
                 if at_row_m:
                     # It's 1-based
-                    row_num = int(at_row_m.group('row'))
+                    row_num = int(at_row_m.group('num'))
                     if len(rows) >= row_num:
-                        row = rows[row_num - 1]
+                        row = RowInfo(row_num, rows[row_num - 1])
 
             return cls(
                 code=int(m.group('code')),

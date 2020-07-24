@@ -44,4 +44,4 @@ async def test_exc_row(conn, table_test1):
             {'amount': Decimal('1234567890.1234567890')},
         )
     assert exc_info.value.code == error_codes.ARGUMENT_OUT_OF_BOUND
-    assert exc_info.value.row == '{"amount": 1234567890.1234567890}'
+    assert exc_info.value.row == (1, '{"amount": 1234567890.1234567890}')
