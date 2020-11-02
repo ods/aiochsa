@@ -1,3 +1,4 @@
+from collections import namedtuple
 import pkgutil
 import simplejson as json
 from typing import Iterable
@@ -21,6 +22,9 @@ type_parser = Lark(
 )
 
 
+EnumOption = namedtuple('EnumOption', ['label', 'value'])
+
+
 @v_args(inline=True)
 class TypeTransformer(Transformer):
 
@@ -37,7 +41,17 @@ class TypeTransformer(Transformer):
         return self._types[name](type_)
 
     def simple_type(self, name, *params):
-        return self._types[name]()
+        return self._types[name](*params)
+
+    def enum_param(self, label, value):
+        return EnumOption(label, value)
+
+    def STRING(self, value):
+        assert value[0] == value[-1] == "'"
+        return value[1:-1]
+
+    def INT(self, value):
+        return int(value)
 
 
 def parse_type(types: TypeRegistry, type_str):

@@ -3,12 +3,15 @@ start: _type
 _type: composite_type | aggregate_type | simple_type
 composite_type: COMPOSITE_NAME "(" _type ("," _type)* ")"
 aggregate_type: AGGREGATE_NAME "(" SIMPLE_NAME "," _type ")"
-simple_type: SIMPLE_NAME [params]
-params: "(" PARAM ("," PARAM)* ")"
+simple_type: SIMPLE_NAME [_params]
+_params: "(" _param ("," _param)* ")"
+_param: enum_param | STRING | INT
+enum_param: STRING "=" INT
 
 COMPOSITE_NAME: /Tuple|Array|Nullable|LowCardinality/
 AGGREGATE_NAME: /AggregateFunction|SimpleAggregateFunction/
 SIMPLE_NAME: /(?!Tuple|Array|Nullable|LowCardinality|AggregateFunction|SimpleAggregateFunction)\w+/
-PARAM: /('([^\\']|\\.)*'\s*=\s)?-?\d+/
+STRING: /'([^\\']|\\.)*'/
+INT: /-?\d+/
 
 %ignore /[ \t\f\r\n]+/ // whitespace
