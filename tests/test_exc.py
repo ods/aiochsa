@@ -34,7 +34,7 @@ async def test_exc_stacktrace(dsn, statement):
 
     assert str(error_codes.SYNTAX_ERROR) in str(exc_info.value)
     assert 'Syntax error' in str(exc_info.value)
-    assert len(str(exc_info.value)) < 2000
+    assert len(str(exc_info.value)) < len(exc_info.value.display_text) + 250
 
 
 async def test_exc_row(conn, table_test1):
