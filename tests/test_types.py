@@ -175,7 +175,9 @@ async def test_as_is_round(conn, value):
     ],
     ids = parametrized_id,
 )
-async def test_zero_dates(conn, sa_type, value):
+async def test_zero_dates(clickhouse_version, conn, sa_type, value):
+    if clickhouse_version >= (20, 7):
+        pytest.skip('Feature is dropped in 20.7')
     result = await conn.fetchval(
         sa.select([sa.func.cast(value, sa_type)])
     )

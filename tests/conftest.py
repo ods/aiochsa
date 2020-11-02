@@ -1,6 +1,7 @@
 import asyncio
 from datetime import datetime
 from decimal import Decimal
+import os
 
 import clickhouse_sqlalchemy
 import pytest
@@ -17,11 +18,32 @@ def pytest_collection_modifyitems(items):
             item.add_marker('asyncio')
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        '--clickhouse-version', default=None,
+        help='use specified version of ClickHouse',
+    )
+
+
 @pytest.fixture(scope='session')
-def dsn(docker_services):
+def dsn(request, docker_services):
+    ch_version = request.config.getoption('--clickhouse-version')
+    if ch_version is not None:
+        os.environ['CLICKHOUSE_VERSION'] = ch_version
     docker_services.start('clickhouse-server')
     public_port = docker_services.wait_for_service('clickhouse-server', 8123)
     return f'clickhouse://{docker_services.docker_ip}:{public_port}'
+
+
+@pytest.fixture
+async def clickhouse_version(dsn):
+    if not hasattr(pytest, 'clickhouse_version'):
+        async with aiochsa.connect(dsn) as conn:
+            version = await conn.fetchval('SELECT version()')
+            pytest.clickhouse_version = tuple(
+                int(num) for num in version.split('.')
+            )
+    return pytest.clickhouse_version
 
 
 @pytest.fixture
