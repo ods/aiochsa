@@ -1,4 +1,4 @@
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from decimal import Decimal
 import enum
 from ipaddress import IPv4Address, IPv6Address
@@ -53,6 +53,7 @@ class CustomStr(str):
 
 
 SaType = Union[sa.types.TypeEngine, Type[sa.types.TypeEngine]]
+
 
 def combine_typed_rapameters(spec_seq: Iterable[Tuple[SaType, Iterable]]):
     return list( # Wrap into list to make it reusable (iterator is one-off)
@@ -175,11 +176,27 @@ async def test_as_is_round(conn, value):
     ],
     ids = parametrized_id,
 )
-async def test_zero_dates(conn, sa_type, value):
+async def test_zero_dates(clickhouse_version, conn, sa_type, value):
+    if clickhouse_version >= (20, 7):
+        pytest.skip('Feature is dropped in 20.7')
     result = await conn.fetchval(
         sa.select([sa.func.cast(value, sa_type)])
     )
     assert result is None
+
+
+@pytest.mark.parametrize('tz_name,tz_offset', [
+    ('UTC', 0),
+    ('EST', -18_000),
+    ('Europe/Moscow', 10_800),
+])
+async def test_timezones(conn, tz_name, tz_offset):
+    dt = datetime(2020, 1, 1)
+    result = await conn.fetchval(
+        sa.func.toTimeZone(sa.func.toDateTime(dt), tz_name).select()
+    )
+    assert result.utcoffset().total_seconds() == tz_offset
+    assert result.astimezone(timezone.utc).replace(tzinfo=None) == dt
 
 
 @pytest.fixture
@@ -244,6 +261,19 @@ async def test_datetime_utc_insert_naive(conn_utc, table_for_type):
             table.insert(),
             {'value': datetime.now()},
         )
+
+
+@pytest.mark.parametrize('tz_name,tz_offset', [
+    ('UTC', 0),
+    ('EST', -18_000),
+    ('Europe/Moscow', 10_800),
+])
+async def test_timezones_with_utc(conn_utc, tz_name, tz_offset):
+    dt = datetime(2020, 1, 1, tzinfo=timezone.utc)
+    result = await conn_utc.fetchval(
+        sa.func.toTimeZone(sa.func.toDateTime(dt, 'UTC'), tz_name).select()
+    )
+    assert result == dt
 
 
 @pytest.mark.parametrize('value', [0, 4294967295])

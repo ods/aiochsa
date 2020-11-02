@@ -6,6 +6,11 @@ from typing import (
 )
 from uuid import UUID
 
+try:
+    import zoneinfo
+except ImportError:
+    from backports import zoneinfo
+
 
 NoneType = type(None)
 PyType = TypeVar('PyType')
@@ -47,6 +52,9 @@ class BaseType(Generic[PyType, JsonType]):
 class StrType(BaseType):
     py_type = str
 
+    def __init__(self, *params):
+        pass
+
     @classmethod
     def escape(cls, value: str, escape=None) -> str:
         value = value.replace('\\', '\\\\').replace("'", "\\'")
@@ -69,6 +77,9 @@ class FloatType(BaseType):
 
 class DecimalType(BaseType):
     py_type = Decimal
+
+    def __init__(self, *params):
+        pass
 
     @classmethod
     def escape(cls, value: PyType, escape: Callable) -> str:
@@ -101,6 +112,14 @@ class DateType(BaseType):
 class DateTimeType(BaseType):
     py_type = datetime
 
+    __slots__ = ('_tzinfo',)
+
+    def __init__(self, tz_name=None):
+        if tz_name is None:
+            self._tzinfo = None
+        else:
+            self._tzinfo = zoneinfo.ZoneInfo(tz_name)
+
     @classmethod
     def escape(cls, value: datetime, escape=None) -> str:
         value = value.replace(tzinfo=None, microsecond=0)
@@ -114,7 +133,10 @@ class DateTimeType(BaseType):
     def from_json(self, value: str) -> Optional[datetime]:
         if value == '0000-00-00 00:00:00':
             return None
-        return datetime.fromisoformat(value)
+        result = datetime.fromisoformat(value)
+        if self._tzinfo is not None:
+            result = result.replace(tzinfo=self._tzinfo)
+        return result
 
 
 class DateTimeUTCType(DateTimeType):
@@ -144,7 +166,11 @@ class DateTimeUTCType(DateTimeType):
         return value.isoformat()
 
     def from_json(self, value: str) -> datetime:
-        return datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
+        result = datetime.fromisoformat(value)
+        if self._tzinfo is None:
+            return result.replace(tzinfo=timezone.utc)
+        else:
+            return result.replace(tzinfo=self._tzinfo).astimezone(timezone.utc)
 
 
 class UUIDType(BaseType):
