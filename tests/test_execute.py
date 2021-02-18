@@ -360,31 +360,31 @@ async def test_nested_structures(conn):
     )
 
 
-async def test_limit_by_with_order_by(conn, table_smt):
+async def test_limit_by_with_order_by(conn, table_mt):
     await conn.execute(
-        table_smt.insert(),
+        table_mt.insert(),
         [
-            {'key': 1, 'value': 13},
-            {'key': 1, 'value': 12},
-            {'key': 1, 'value': 11},
-            {'key': 2, 'value': 21},
-            {'key': 2, 'value': 22},
+            {'num': 1, 'title': '13'},
+            {'num': 1, 'title': '12'},
+            {'num': 1, 'title': '11'},
+            {'num': 2, 'title': '21'},
+            {'num': 2, 'title': '22'},
         ],
     )
 
     query = (
-        aiochsa.select([table_smt.c.value])
-            .order_by(table_smt.c.key, table_smt.c.value)
+        aiochsa.select([table_mt.c.title])
+            .order_by(table_mt.c.num, table_mt.c.title)
     )
     rows = await conn.fetch(
-        query.limit_by(table_smt.c.key, limit=2)
+        query.limit_by(table_mt.c.num, limit=2)
     )
-    assert [value for (value,) in rows] == [11, 12, 21, 22]
+    assert [title for (title,) in rows] == ['11', '12', '21', '22']
 
     rows = await conn.fetch(
-        query.limit_by(table_smt.c.key, offset=1, limit=1)
+        query.limit_by(table_mt.c.num, offset=1, limit=1)
     )
-    assert [value for (value,) in rows] == [12, 22]
+    assert [title for (title,) in rows] == ['12', '22']
 
 
 async def test_limit_by_without_order_by(conn, table_smt):
