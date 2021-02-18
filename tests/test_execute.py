@@ -7,8 +7,8 @@ import sqlalchemy as sa
 
 import aiochsa
 
-async def test_ddl(conn, table_test1):
-    await conn.execute(sa.DDL(f'DROP TABLE {table_test1.name}'))
+async def test_ddl(conn, table_test):
+    await conn.execute(sa.DDL(f'DROP TABLE {table_test.name}'))
 
 
 @pytest.mark.xfail(
@@ -17,9 +17,9 @@ async def test_ddl(conn, table_test1):
     # execution.
     reason='Execution of default is not supported yet',
 )
-async def test_execute_default(conn, table_test1):
+async def test_execute_default(conn, table_test):
     ts_before = datetime.utcnow().replace(microsecond=0)
-    now = await conn.fetchval(table_test1.c.timestamp.default)
+    now = await conn.fetchval(table_test.c.timestamp.default)
     ts_after = datetime.utcnow().replace(microsecond=0)
     assert ts_before <= now <= ts_after
 
@@ -47,7 +47,7 @@ async def test_func_params_args(conn):
     assert result == 35
 
 
-async def test_simple_round(conn, table_test1):
+async def test_simple_round(conn, table_test):
     now = datetime.utcnow().replace(microsecond=0)
     values = {
         'id': 1,
@@ -57,43 +57,43 @@ async def test_simple_round(conn, table_test1):
         'amount': Decimal('1.23'),
     }
     await conn.execute(
-        table_test1.insert()
+        table_test.insert()
             .values(values)
     )
 
-    rows = await conn.fetch(table_test1.select())
-    row1 = await conn.fetchrow(table_test1.select())
-    row2 = await conn.fetchrow(f'SELECT * from {table_test1.name}')
+    rows = await conn.fetch(table_test.select())
+    row1 = await conn.fetchrow(table_test.select())
+    row2 = await conn.fetchrow(f'SELECT * from {table_test.name}')
     assert rows == [row1]
     assert row1 == row2 == values
 
 
-async def test_non_ascii(conn, table_test1, any_select):
+async def test_non_ascii(conn, table_test, any_select):
     sample = 'зразок'
     await conn.execute(
-        table_test1.insert()
+        table_test.insert()
             .values(id=1, name=sample)
     )
     name = await conn.fetchval(
-        any_select([table_test1.c.name])
-            .where(table_test1.c.id == 1)
+        any_select([table_test.c.name])
+            .where(table_test.c.id == 1)
     )
     assert name == sample
 
 
-async def test_enum(conn, table_test1, any_select):
+async def test_enum(conn, table_test, any_select):
 
     class EnumType(str, Enum):
         ONE = 'ONE'
         TWO = 'TWO'
 
     await conn.execute(
-        table_test1.insert()
+        table_test.insert()
             .values(id=1, enum=EnumType.ONE)
     )
     value = await conn.fetchval(
-        any_select([table_test1.c.enum])
-            .where(table_test1.c.id == 1)
+        any_select([table_test.c.enum])
+            .where(table_test.c.id == 1)
     )
     assert value == EnumType.ONE
 
@@ -107,7 +107,7 @@ async def test_unsupported_type(conn, any_select):
 
 
 @pytest.mark.xfail(reason='Feature is disabled in favour of speed')
-async def test_defaults(conn, table_test1):
+async def test_defaults(conn, table_test):
     ts_before = datetime.utcnow().replace(microsecond=0)
     values = {
         'id': 1,
@@ -115,19 +115,19 @@ async def test_defaults(conn, table_test1):
         'name': 'test',
     }
     await conn.execute(
-        table_test1.insert()
+        table_test.insert()
             .values(values)
     )
     ts_after = datetime.utcnow().replace(microsecond=0)
 
-    row = await conn.fetchrow(table_test1.select())
+    row = await conn.fetchrow(table_test.select())
     for field, value in values.items():
         assert row[field] == value
     assert ts_before <= row['timestamp'] <= ts_after
     assert row['amount'] == Decimal(0)
 
 
-async def test_insert_multiple(conn, table_test1, any_select):
+async def test_insert_multiple(conn, table_test, any_select):
     values = [
         {
             'id': i + 1,
@@ -137,105 +137,105 @@ async def test_insert_multiple(conn, table_test1, any_select):
         for i in range(6)
     ]
     await conn.execute(
-        table_test1.insert()
+        table_test.insert()
             .values(values)
     )
 
     rows = await conn.fetch(
-        any_select([table_test1.c.id])
-            .where(table_test1.c.enum == 'ONE')
-            .order_by(table_test1.c.id.desc())
+        any_select([table_test.c.id])
+            .where(table_test.c.enum == 'ONE')
+            .order_by(table_test.c.id.desc())
     )
     assert [item_id for (item_id,) in rows] == [5, 3, 1]
 
 
-async def test_insert_multiple_args(conn, table_test1, any_select):
+async def test_insert_multiple_args(conn, table_test, any_select):
     values = [
         {'id': i + 1, 'name': f'test{i + 1}'}
         for i in range(3)
     ]
     await conn.execute(
-        table_test1.insert(), *values,
+        table_test.insert(), *values,
     )
 
     rows = await conn.fetch(
-        any_select([table_test1.c.id, table_test1.c.name])
+        any_select([table_test.c.id, table_test.c.name])
     )
     assert rows == values
 
 
-async def test_insert_select(conn, table_test1, table_test2, any_select):
+async def test_insert_select(conn, table_test, table_mt, any_select):
     values = [
         {'id': i + 1, 'name': f'test{i + 1}'}
         for i in range(3)
     ]
     await conn.execute(
-        table_test1.insert(), *values,
+        table_test.insert(), *values,
     )
 
     await conn.execute(
-        table_test2.insert()
+        table_mt.insert()
             .from_select(
-                [table_test2.c.num, table_test2.c.title],
-                any_select([table_test1.c.id, table_test1.c.name])
-                    .where(table_test1.c.id > 1)
+                [table_mt.c.num, table_mt.c.title],
+                any_select([table_test.c.id, table_test.c.name])
+                    .where(table_test.c.id > 1)
             )
     )
     rows = await conn.fetch(
-        table_test2.select()
+        table_mt.select()
     )
-    assert rows == [('test2', 2), ('test3', 3)]
+    assert rows == [(2, 'test2'), (3, 'test3')]
 
 
 @pytest.mark.xfail(reason='CTE is not supported by clickhouse-sqlalchemy')
-async def test_insert_select_cte(conn, table_test2, any_select):
+async def test_insert_select_cte(conn, table_mt, any_select):
     await conn.execute(
-        table_test2.insert(), {'title': 'test', 'num': 1},
+        table_mt.insert(), {'title': 'test', 'num': 1},
     )
 
     max_num = (
-        any_select([sa.func.max(table_test2.c.num)])
+        any_select([sa.func.max(table_mt.c.num)])
             .cte()
     )
 
     await conn.execute(
-        table_test2.insert()
+        table_mt.insert()
             .from_select(
-                [table_test2.c.num, table_test2.c.title],
-                any_select([max_num, table_test2.c.title])
+                [table_mt.c.num, table_mt.c.title],
+                any_select([max_num, table_mt.c.title])
             )
     )
     rows = await conn.fetch(
-        table_test2.select()
+        table_mt.select()
     )
     assert rows == [('test', 1), ('test', 2)]
 
 
-async def test_join(conn, table_test1, any_select):
+async def test_join(conn, table_test, any_select):
     await conn.execute(
-        table_test1.insert(),
+        table_test.insert(),
         *[
             {'id': i + 1, 'name': f'test{i + 1}'}
             for i in range(3)
         ],
     )
 
-    test_alias = table_test1.alias()
+    test_alias = table_test.alias()
     rows = await conn.fetch (
-        any_select([table_test1.c.id, test_alias.c.id])
+        any_select([table_test.c.id, test_alias.c.id])
             .select_from(
-                table_test1.join(
+                table_test.join(
                     test_alias,
-                    test_alias.c.id == table_test1.c.id,
+                    test_alias.c.id == table_test.c.id,
                 )
             )
     )
     assert {tuple(row) for row in rows} == {(1, 1), (2, 2), (3, 3)}
 
 
-async def test_iterate(conn, table_test1, any_select):
+async def test_iterate(conn, table_test, any_select):
     await conn.execute(
-        table_test1.insert(),
+        table_test.insert(),
         *[
             {'id': i + 1, 'name': f'test{i + 1}'}
             for i in range(3)
@@ -243,21 +243,21 @@ async def test_iterate(conn, table_test1, any_select):
     )
 
     rows_agen = conn.iterate(
-        any_select([table_test1.c.id])
+        any_select([table_test.c.id])
     )
     assert [item_id async for (item_id,) in rows_agen] == [1, 2, 3]
 
 
-async def test_fetchval_empty(conn, table_test1, any_select):
+async def test_fetchval_empty(conn, table_test, any_select):
     value = await conn.fetchval(
-        any_select([table_test1.c.id])
+        any_select([table_test.c.id])
     )
     assert value is None
 
 
-async def test_select_params(conn, table_test1, any_select):
+async def test_select_params(conn, table_test, any_select):
     await conn.execute(
-        table_test1.insert(),
+        table_test.insert(),
         *[
             {'id': i + 1, 'name': f'test{i + 1}'}
             for i in range(3)
@@ -265,16 +265,16 @@ async def test_select_params(conn, table_test1, any_select):
     )
 
     rows = await conn.fetch(
-        any_select([table_test1.c.id])
-            .where(table_test1.c.id >= sa.bindparam('min_id'))
+        any_select([table_test.c.id])
+            .where(table_test.c.id >= sa.bindparam('min_id'))
             .params(min_id=2)
     )
     assert [item_id for (item_id,) in rows] == [2, 3]
 
 
-async def test_select_params_args(conn, table_test1, any_select):
+async def test_select_params_args(conn, table_test, any_select):
     await conn.execute(
-        table_test1.insert(),
+        table_test.insert(),
         *[
             {'id': i + 1, 'name': f'test{i + 1}'}
             for i in range(3)
@@ -282,21 +282,21 @@ async def test_select_params_args(conn, table_test1, any_select):
     )
 
     rows = await conn.fetch(
-        any_select([table_test1.c.id])
-            .where(table_test1.c.id >= sa.bindparam('min_id')),
+        any_select([table_test.c.id])
+            .where(table_test.c.id >= sa.bindparam('min_id')),
         {'min_id': 2},
     )
     assert [item_id for (item_id,) in rows] == [2, 3]
 
 
-async def test_final_hint(conn, table_test3):
+async def test_final_hint(conn, table_smt):
     await conn.execute(
-        table_test3.insert(),
+        table_smt.insert(),
         *[{'key': 123, 'value': i} for i in range(10)]
     )
     rows = await conn.fetch(
-        table_test3.select()
-            .with_hint(table_test3, 'FINAL')
+        table_smt.select()
+            .with_hint(table_smt, 'FINAL')
     )
     assert len(rows) == 1
     assert rows[0]['value'] == 45
@@ -304,43 +304,43 @@ async def test_final_hint(conn, table_test3):
 
 @pytest.mark.parametrize('alised', [False, True])
 async def test_join_final_hint(
-    conn, table_test1, table_test3, alised, any_select,
+    conn, table_test, table_smt, alised, any_select,
 ):
     await conn.execute(
-        table_test1.insert(),
+        table_test.insert(),
         {'id': 12, 'name': 'name12'},
         {'id': 23, 'name': 'name23'},
     )
     await conn.execute(
-        table_test3.insert(),
+        table_smt.insert(),
         *[{'key': 12, 'value': i} for i in range(10)]
     )
 
     if alised:
-        table_test3 = table_test3.alias()
+        table_smt = table_smt.alias()
     query = (
-        any_select([table_test1.c.name, table_test3.c.value])
+        any_select([table_test.c.name, table_smt.c.value])
             .select_from(
-                table_test3.join(
-                    table_test1,
-                    table_test1.c.id == sa.func.toUInt64(table_test3.c.key),
+                table_smt.join(
+                    table_test,
+                    table_test.c.id == sa.func.toUInt64(table_smt.c.key),
                 )
             )
-            .with_hint(table_test3, 'FINAL')
+            .with_hint(table_smt, 'FINAL')
     )
     rows = await conn.fetch(query)
     assert len(rows) == 1
     assert rows[0]['name'] == 'name12'
 
 
-async def test_aggregate_function(conn, table_test4, any_select):
-    await conn.execute('INSERT INTO test4 SELECT 1, sumState(123)')
+async def test_aggregate_function(conn, table_amt, any_select):
+    await conn.execute('INSERT INTO test_amt SELECT 1, sumState(123)')
     value = await conn.fetchval(
-        any_select([table_test4.c.value])
+        any_select([table_amt.c.value])
     )
     assert isinstance(value, aiochsa.types.AggregateFunction)
     value = await conn.fetchval(
-        any_select([sa.func.sumMerge(table_test4.c.value)])
+        any_select([sa.func.sumMerge(table_amt.c.value)])
     )
     assert value == 123
 
@@ -360,9 +360,9 @@ async def test_nested_structures(conn):
     )
 
 
-async def test_limit_by_with_order_by(conn, table_test3):
+async def test_limit_by_with_order_by(conn, table_smt):
     await conn.execute(
-        table_test3.insert(),
+        table_smt.insert(),
         [
             {'key': 1, 'value': 13},
             {'key': 1, 'value': 12},
@@ -373,23 +373,23 @@ async def test_limit_by_with_order_by(conn, table_test3):
     )
 
     query = (
-        aiochsa.select([table_test3.c.value])
-            .order_by(table_test3.c.key, table_test3.c.value)
+        aiochsa.select([table_smt.c.value])
+            .order_by(table_smt.c.key, table_smt.c.value)
     )
     rows = await conn.fetch(
-        query.limit_by(table_test3.c.key, limit=2)
+        query.limit_by(table_smt.c.key, limit=2)
     )
     assert [value for (value,) in rows] == [11, 12, 21, 22]
 
     rows = await conn.fetch(
-        query.limit_by(table_test3.c.key, offset=1, limit=1)
+        query.limit_by(table_smt.c.key, offset=1, limit=1)
     )
     assert [value for (value,) in rows] == [12, 22]
 
 
-async def test_limit_by_without_order_by(conn, table_test3):
+async def test_limit_by_without_order_by(conn, table_smt):
     await conn.execute(
-        table_test3.insert(),
+        table_smt.insert(),
         [
             {'key': 1, 'value': 13},
             {'key': 1, 'value': 12},
@@ -399,7 +399,7 @@ async def test_limit_by_without_order_by(conn, table_test3):
         ],
     )
     rows = await conn.fetch(
-        aiochsa.select([table_test3.c.key])
-            .limit_by(table_test3.c.key, limit=1)
+        aiochsa.select([table_smt.c.key])
+            .limit_by(table_smt.c.key, limit=1)
     )
     assert {value for (value,) in rows} == {1, 2}

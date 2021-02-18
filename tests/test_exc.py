@@ -37,10 +37,10 @@ async def test_exc_stacktrace(dsn, statement):
     assert len(str(exc_info.value)) < len(exc_info.value.display_text) + 250
 
 
-async def test_exc_row(conn, table_test1):
+async def test_exc_row(conn, table_test):
     with pytest.raises(aiochsa.DBException) as exc_info:
         await conn.execute(
-            table_test1.insert(),
+            table_test.insert(),
             {'amount': Decimal('1234567890.1234567890')},
         )
     assert exc_info.value.code == error_codes.ARGUMENT_OUT_OF_BOUND

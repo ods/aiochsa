@@ -74,7 +74,7 @@ def recreate_table(conn):
 
 
 TEST1_CREATE_DDL = '''\
-CREATE TABLE test1
+CREATE TABLE test
 (
     id UInt64,
     enum Enum8(''=0, 'ONE'=1, 'TWO'=2),
@@ -88,11 +88,11 @@ ORDER BY id
 
 
 @pytest.fixture
-async def table_test1(recreate_table):
-    await recreate_table('test1', TEST1_CREATE_DDL)
+async def table_test(recreate_table):
+    await recreate_table('test', TEST1_CREATE_DDL)
 
     return sa.Table(
-        'test1', sa.MetaData(),
+        'test', sa.MetaData(),
         sa.Column('id', sa.Integer),
         sa.Column('enum', sa.Enum, default=''),
         sa.Column('name', sa.String),
@@ -101,8 +101,8 @@ async def table_test1(recreate_table):
     )
 
 
-TEST2_CREATE_DDL = '''\
-CREATE TABLE test2
+TEST_MT_CREATE_DDL = '''\
+CREATE TABLE test_mt
 (
     title String,
     num UInt64
@@ -113,18 +113,18 @@ ORDER BY num
 
 
 @pytest.fixture
-async def table_test2(recreate_table):
-    await recreate_table('test2', TEST2_CREATE_DDL)
+async def table_mt(recreate_table):
+    await recreate_table('test_mt', TEST_MT_CREATE_DDL)
 
     return sa.Table(
-        'test2', sa.MetaData(),
-        sa.Column('title', sa.String),
+        'test_mt', sa.MetaData(),
         sa.Column('num', sa.Integer),
+        sa.Column('title', sa.String),
     )
 
 
-TEST3_CREATE_DDL = '''\
-CREATE TABLE test3
+TEST_SMT_CREATE_DDL = '''\
+CREATE TABLE table_smt
 (
     key UInt8,
     value UInt64
@@ -135,18 +135,18 @@ ORDER BY key
 
 
 @pytest.fixture
-async def table_test3(recreate_table):
-    await recreate_table('test3', TEST3_CREATE_DDL)
+async def table_smt(recreate_table):
+    await recreate_table('table_smt', TEST_SMT_CREATE_DDL)
 
     return sa.Table(
-        'test3', sa.MetaData(),
+        'table_smt', sa.MetaData(),
         sa.Column('key', sa.Integer),
         sa.Column('value', sa.Integer),
     )
 
 
-TEST4_CREATE_DDL = '''\
-CREATE TABLE test4
+TEST_AMT_CREATE_DDL = '''\
+CREATE TABLE test_amt
 (
     key UInt8,
     value AggregateFunction(sum, UInt8)
@@ -157,11 +157,11 @@ ORDER BY key
 
 
 @pytest.fixture
-async def table_test4(recreate_table):
-    await recreate_table('test4', TEST4_CREATE_DDL)
+async def table_amt(recreate_table):
+    await recreate_table('test_amt', TEST_AMT_CREATE_DDL)
 
     return sa.Table(
-        'test4', sa.MetaData(),
+        'test_amt', sa.MetaData(),
         sa.Column('key', sa.Integer),
         sa.Column('value', sa.Integer),
     )
