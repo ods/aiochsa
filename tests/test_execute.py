@@ -377,12 +377,12 @@ async def test_limit_by_with_order_by(conn, table_mt):
             .order_by(table_mt.c.num, table_mt.c.title)
     )
     rows = await conn.fetch(
-        query.limit_by(table_mt.c.num, limit=2)
+        query.limit_by([table_mt.c.num], limit=2)
     )
     assert [title for (title,) in rows] == ['11', '12', '21', '22']
 
     rows = await conn.fetch(
-        query.limit_by(table_mt.c.num, offset=1, limit=1)
+        query.limit_by([table_mt.c.num], offset=1, limit=1)
     )
     assert [title for (title,) in rows] == ['12', '22']
 
@@ -400,6 +400,6 @@ async def test_limit_by_without_order_by(conn, table_smt):
     )
     rows = await conn.fetch(
         aiochsa.select([table_smt.c.key])
-            .limit_by(table_smt.c.key, limit=1)
+            .limit_by([table_smt.c.key], limit=1)
     )
     assert {value for (value,) in rows} == {1, 2}
