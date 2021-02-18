@@ -63,3 +63,23 @@ Change log
 ----------
 
 See `CHANGELOG <https://github.com/ods/aiochsa/blob/master/CHANGELOG.rst>`_.
+
+
+Development
+-----------
+
+Prerequizites: Python (use pyenv to manage multiple versions), pip, tox,
+coverage, docker, docker-compose.
+
+Running tests:
+
+.. code-block:: shell
+
+    # Run whole tests matrix:
+    tox
+    # Run test with specific Python version only:
+    tox -e py38
+    # Test with specific Clickhouse version:
+    tox -e py38 -- --clickhouse-version=21.2.2.8
+    # Run specified test(s):
+    tox -e py38 -- tests/test_execute.py::test_aggregate_function
