@@ -85,13 +85,14 @@ TYPED_PARAMETERS = combine_typed_rapameters([
     (t.Float32, [0., -0., 1e-37, -1e-37, 1e38, -1e38]),
     (t.Float64, [0., -0., 1e-307, -1e-307, 1e308, -1e308]),
 
-    (t.Decimal(9, 4), map(Decimal, [0, '1.2345', '-1.2345'])),
-    (t.Decimal(18, 9), map(Decimal,
-        [0, '1.234567891', '-1.234567891']
-    )),
-    (t.Decimal(38, 19), map(Decimal,
-        [0, '1.234567891234567891', '-1.234567891234567891']
-    )),
+    (t.Decimal(9, 4), [Decimal(), Decimal('1.2345'), Decimal('-1.2345')]),
+    (t.Decimal(18, 9), [
+        Decimal(0), Decimal('1.234567891'), Decimal('-1.234567891'),
+    ]),
+    (t.Decimal(38, 19), [
+        Decimal(0), Decimal('1.234567891234567891'),
+        Decimal('-1.234567891234567891'),
+    ]),
 
     # Start of the epoch is not supported by Clickhouse, at least one
     # second or day must be added

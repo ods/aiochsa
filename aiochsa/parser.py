@@ -17,7 +17,7 @@ JSONDecodeError = json.JSONDecodeError
 
 
 type_parser = Lark(
-    pkgutil.get_data(__name__, 'type.lark').decode(),
+    pkgutil.get_data(__name__, 'type.lark').decode(),  # type: ignore
     parser='lalr',
 )
 

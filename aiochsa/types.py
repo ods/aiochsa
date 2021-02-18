@@ -9,29 +9,28 @@ from uuid import UUID
 try:
     import zoneinfo
 except ImportError:
-    from backports import zoneinfo
+    from backports import zoneinfo  # type: ignore
 
 
-NoneType = type(None)
 PyType = TypeVar('PyType')
-JsonType = TypeVar('JsonType', NoneType, int, float, Decimal, str, list)
+JsonType = TypeVar('JsonType', None, int, float, Decimal, str, list)
 
 
 class BaseType(Generic[PyType, JsonType]):
     __slots__ = ()
 
-    py_type: Optional[Type[PyType]] = None
+    py_type: Type[PyType]
 
     @classmethod
     def escape(cls, value: PyType, escape: Callable) -> str:
         return str(value)
 
-    def from_json(self, value: JsonType) -> PyType:
-        return self.py_type(value)
+    def from_json(self, value: JsonType) -> Optional[PyType]:
+        raise NotImplementedError()
 
     @classmethod
     def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
-        return value
+        raise NotImplementedError()
 
     def __eq__(self, other):
         return (
@@ -49,7 +48,7 @@ class BaseType(Generic[PyType, JsonType]):
         )
 
 
-class StrType(BaseType):
+class StrType(BaseType[str, str]):
     py_type = str
 
     def __init__(self, *params):
@@ -60,6 +59,13 @@ class StrType(BaseType):
         value = value.replace('\\', '\\\\').replace("'", "\\'")
         return f"'{value}'"
 
+    def from_json(self, value: str) -> str:
+        return str(value)
+
+    @classmethod
+    def to_json(cls, value: str, to_json: Callable) -> str:
+        return value
+
 
 class StrStripZerosType(StrType):
 
@@ -67,15 +73,29 @@ class StrStripZerosType(StrType):
         return value.rstrip('\0')
 
 
-class IntType(BaseType):
+class IntType(BaseType[int, int]):
     py_type = int
 
+    def from_json(self, value: int) -> int:
+        return int(value)
 
-class FloatType(BaseType):
+    @classmethod
+    def to_json(cls, value: int, to_json: Callable) -> int:
+        return value
+
+
+class FloatType(BaseType[float, float]):
     py_type = float
 
+    def from_json(self, value: float) -> float:
+        return float(value)
 
-class DecimalType(BaseType):
+    @classmethod
+    def to_json(cls, value: float, to_json: Callable) -> float:
+        return value
+
+
+class DecimalType(BaseType[Decimal, Decimal]):
     py_type = Decimal
 
     def __init__(self, *params):
@@ -85,22 +105,27 @@ class DecimalType(BaseType):
     def escape(cls, value: PyType, escape: Callable) -> str:
         return f"'{value}'"
 
+    def from_json(self, value: Decimal) -> Decimal:
+        return Decimal(value)
+
     @classmethod
-    def to_json(cls, value: PyType, to_json: Callable) -> JsonType:
+    def to_json(cls, value: Decimal, to_json: Callable) -> Decimal:
         # Clickhouse requires serializing it without quotes, so we use
         # `simplejson.dumps(..., use_decimal=True)`
         return value
 
 
-class DateType(BaseType):
-    py_type = date
+class DateType(BaseType[date, str]):
+    py_type = Optional[date]
 
     @classmethod
     def escape(cls, value: date, escape=None) -> str:
+        if value is None:
+            return "'0000-00-00'"
         return f"'{value.isoformat()}'"
 
     @classmethod
-    def to_json(cls, value: date, to_json: Callable) -> JsonType:
+    def to_json(cls, value: date, to_json: Callable) -> str:
         return value.isoformat()
 
     def from_json(self, value: str) -> Optional[date]:
@@ -109,7 +134,7 @@ class DateType(BaseType):
         return date.fromisoformat(value)
 
 
-class DateTimeType(BaseType):
+class DateTimeType(BaseType[datetime, str]):
     py_type = datetime
 
     __slots__ = ('_tzinfo',)
@@ -126,7 +151,7 @@ class DateTimeType(BaseType):
         return f"'{value.isoformat()}'"
 
     @classmethod
-    def to_json(cls, value: datetime, to_json: Callable) -> JsonType:
+    def to_json(cls, value: datetime, to_json: Callable) -> str:
         value = value.replace(tzinfo=None, microsecond=0)
         return value.isoformat()
 
@@ -154,7 +179,7 @@ class DateTimeUTCType(DateTimeType):
         return f"'{value.isoformat()}'"
 
     @classmethod
-    def to_json(cls, value: datetime, to_json: Callable) -> JsonType:
+    def to_json(cls, value: datetime, to_json: Callable) -> str:
         if value.utcoffset() is None:
             raise ValueError(
                 'Got naive datetime while timezone-aware is expected'
@@ -173,7 +198,7 @@ class DateTimeUTCType(DateTimeType):
             return result.replace(tzinfo=self._tzinfo).astimezone(timezone.utc)
 
 
-class UUIDType(BaseType):
+class UUIDType(BaseType[UUID, str]):
     py_type = UUID
 
     @classmethod
@@ -181,38 +206,52 @@ class UUIDType(BaseType):
         return f"'{value}'"
 
     @classmethod
-    def to_json(cls, value: UUID, to_json: Callable) -> JsonType:
+    def to_json(cls, value: UUID, to_json: Callable) -> str:
         return str(value)
 
+    def from_json(self, value: str) -> UUID:
+        return self.py_type(value)
 
-class IPv4Type(BaseType):
+
+class IPv4Type(BaseType[IPv4Address, str]):
     py_type = IPv4Address
 
     @classmethod
-    def to_json(cls, value: IPv4Address, to_json: Callable) -> JsonType:
+    def to_json(cls, value: IPv4Address, to_json: Callable) -> str:
         return str(value)
 
+    def from_json(self, value: str) -> IPv4Address:
+        return self.py_type(value)
 
-class IPv6Type(BaseType):
+
+class IPv6Type(BaseType[IPv6Address, str]):
     py_type = IPv6Address
 
     @classmethod
-    def to_json(cls, value: IPv6Address, to_json: Callable) -> JsonType:
+    def to_json(cls, value: IPv6Address, to_json: Callable) -> str:
         return str(value)
 
+    def from_json(self, value: str) -> IPv6Address:
+        return self.py_type(value)
 
-class NothingType(BaseType):
-    py_type = NoneType
 
-    def escape(self, value: NoneType, escape=None) -> str:
+class NothingType(BaseType[None, None]):
+    py_type = Type[None]
+
+    @classmethod
+    def escape(cls, value: None, escape=None) -> str:
         return 'NULL'
 
-    def from_json(self, value: NoneType) -> None:
+    @classmethod
+    def to_json(cls, value: None, to_json: Callable) -> None:
+        return None
+
+    def from_json(self, value: None) -> None:
         # Actually it's never called
         return None # pragma: nocover
 
 
-class TupleType(BaseType):
+class TupleType(BaseType[tuple, list]):
     __slots__ = ('_item_types',)
 
     py_type = tuple
@@ -227,7 +266,7 @@ class TupleType(BaseType):
         )
 
     @classmethod
-    def to_json(cls, value: tuple, to_json: Callable) -> JsonType:
+    def to_json(cls, value: tuple, to_json: Callable) -> List[JsonType]:
         return [to_json(v) for v in value]
 
     def from_json(self, value: List[JsonType]) -> tuple:
@@ -237,7 +276,7 @@ class TupleType(BaseType):
         )
 
 
-class ArrayType(BaseType):
+class ArrayType(BaseType[list, list]):
     __slots__ = ('_item_type',)
 
     py_type = list
@@ -252,7 +291,7 @@ class ArrayType(BaseType):
         )
 
     @classmethod
-    def to_json(cls, value: list, to_json: Callable) -> JsonType:
+    def to_json(cls, value: list, to_json: Callable) -> List[JsonType]:
         return [to_json(v) for v in value]
 
     def from_json(self, value: List[JsonType]) -> list:
@@ -336,7 +375,7 @@ DEFAULT_CONVERTES = [
     (UUIDType, ['UUID'], UUID),
     (IPv4Type, ['IPv4'], IPv4Address),
     (IPv6Type, ['IPv6'], IPv6Address),
-    (NothingType, ['Nothing'], NoneType),
+    (NothingType, ['Nothing'], type(None)),
     (TupleType, ['Tuple'], tuple),
     (ArrayType, ['Array'], list),
     (NullableType, ['Nullable']),

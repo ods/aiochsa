@@ -51,7 +51,7 @@ class Pool:
         if isinstance(session_timeout, dict):
             timeout_params.update(session_timeout)
         else:
-            timeout_params['total'] = session_timeout
+            timeout_params['total'] = session_timeout  # type: ignore
         self._session = session_class(
             timeout=ClientTimeout(**timeout_params)
         )
