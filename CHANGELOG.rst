@@ -1,6 +1,14 @@
 Change Log
 ==========
 
+1.0.0 (2021-02-20)
+------------------
+
+* Switch to ``limit_by`` provided by new version of ``clickhouse_sqlalchemy``
+  (incompatible interface)
+* Fix type annotations
+
+
 0.11.0 (2020-11-01)
 -------------------
 
