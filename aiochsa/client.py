@@ -99,6 +99,8 @@ class Client:
                     raise ProtocolError(exc) from exc
                 logger.debug(f'First attempt failed, retrying (error: {exc})')
 
+        assert False, 'Unreachable'  # To silence mypy
+
     async def iterate(
         self, statement: Statement, *args,
     ) -> AsyncGenerator[Record, None]:
