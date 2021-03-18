@@ -2,7 +2,8 @@ from datetime import date, datetime, timezone
 from decimal import Decimal
 from ipaddress import IPv4Address, IPv6Address
 from typing import (
-    Any, Callable, Generic, Iterable, List, Optional, Type, TypeVar, Union,
+    Any, Callable, Generic, Iterable, List, Optional, Type, Tuple, TypeVar,
+    Union,
 )
 from uuid import UUID
 
@@ -17,7 +18,7 @@ JsonType = TypeVar('JsonType', None, int, float, Decimal, str, list)
 
 
 class BaseType(Generic[PyType, JsonType]):
-    __slots__ = ()
+    __slots__: Tuple[str, ...] = ()
 
     py_type: Type[PyType]
 
