@@ -35,15 +35,19 @@ def dsn(request, docker_services):
     return f'clickhouse://{docker_services.docker_ip}:{public_port}'
 
 
+_clickhouse_version = None
+
+
 @pytest.fixture
 async def clickhouse_version(dsn):
-    if not hasattr(pytest, 'clickhouse_version'):
+    global _clickhouse_version
+    if _clickhouse_version is None:
         async with aiochsa.connect(dsn) as conn:
             version = await conn.fetchval('SELECT version()')
-            pytest.clickhouse_version = tuple(
+            _clickhouse_version = tuple(
                 int(num) for num in version.split('.')
             )
-    return pytest.clickhouse_version
+    return _clickhouse_version
 
 
 @pytest.fixture
