@@ -1,8 +1,8 @@
 Change Log
 ==========
 
-Unreleased
-----------
+1.1.0 (2021-03-19)
+------------------
 
 * Check and fix untyped definitions
 * Mark package as typed
