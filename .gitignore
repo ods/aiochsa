@@ -1,5 +1,8 @@
-.tox
-.coverage
-.eggs/
-build/
-dist/
+__pycache__/
+/.tox
+/.mypy_cache/
+/.coverage
+/.eggs/
+/*.egg-info/
+/build/
+/dist/
