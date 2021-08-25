@@ -6,6 +6,32 @@ on:
 
 jobs:
 
+  mypy:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version:
+          - "3.9"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Without this we eventually get warning
+      - name: Update Pip
+        run: pip install -U pip
+
+      - name: Install Tox
+        run: pip install tox
+
+      - name: Check with mypy
+        run: tox -e mypy
+
   test:
     runs-on: ubuntu-latest
 
@@ -50,7 +76,7 @@ jobs:
       - name: Install Tox
         run: pip install tox
 
-      - name: Test
+      - name: Run tests
         env:
           CLICKHOUSE_VERSION: ${{ matrix.clickhouse-version }}
         run: tox -e py
