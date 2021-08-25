@@ -43,6 +43,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
+      # Without this we eventually get warning
+      - name: Update Pip
+        run: pip install -U pip
+
       - name: Install Tox
         run: pip install tox
 
