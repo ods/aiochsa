@@ -1,0 +1,82 @@
+name: Tests
+
+on:
+  - push
+  - pull_request
+
+jobs:
+
+  mypy:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version:
+          - "3.9"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Without this we eventually get warning
+      - name: Update Pip
+        run: pip install -U pip
+
+      - name: Install Tox
+        run: pip install tox
+
+      - name: Check with mypy
+        run: tox -e mypy
+
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version:
+          - "3.7"
+          - "3.8"
+          - "3.9"
+          - "3.10.0-rc.1"
+
+        clickhouse-version:
+          - "latest"
+
+        include:
+          # The versions here are picked from Altinity Stable Releases
+          # https://docs.altinity.com/altinitystablerelease/releasenotes/
+          - python-version: "3.8"
+            clickhouse-version: "19.16.19.85"
+          - python-version: "3.8"
+            clickhouse-version: "20.3.19.4"
+          - python-version: "3.8"
+            clickhouse-version: "20.8.12.2"
+          - python-version: "3.9"
+            # No container for 21.1.10.3
+            clickhouse-version: "21.1.9.41"
+          - python-version: "3.9"
+            clickhouse-version: "21.3.13.9"
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      # Without this we eventually get warning
+      - name: Update Pip
+        run: pip install -U pip
+
+      - name: Install Tox
+        run: pip install tox
+
+      - name: Run tests
+        env:
+          CLICKHOUSE_VERSION: ${{ matrix.clickhouse-version }}
+        run: tox -e py
