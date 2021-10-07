@@ -5,8 +5,12 @@ import re
 # Based on `getExceptionMessage()`:
 # https://github.com/ClickHouse/ClickHouse/blob/master/src/Common/Exception.cpp#L370-L373
 exc_message_re = re.compile(
-    r'Code: (?P<code>\d+), '
-        r'e\.displayText\(\) = (?P<display_text>.+?)'
+    r'Code: (?P<code>\d+)'
+        # <= 21.8.8.29:
+        #   "Code: 62, e.displayText() = DB::Exception: ..."
+        # >= 21.9.2.17:
+        #   "Code: 62. DB::Exception: ..."
+        r'(?:, e\.displayText\(\) =|\.) (?P<display_text>.+?)'
         r'(?:, Stack trace[^:]*:\s+(?P<stack_trace>.+))?$',
     re.M,
 )
