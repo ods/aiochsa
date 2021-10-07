@@ -1,6 +1,12 @@
 Change Log
 ==========
 
+1.2.0 (2021-10-07)
+------------------
+
+* Fix DBException message parser for Clickhouse 21.9
+
+
 1.1.0 (2021-03-19)
 ------------------
 
