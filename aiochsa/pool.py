@@ -55,7 +55,7 @@ class Pool:
         self._session = session_class(
             timeout=ClientTimeout(**timeout_params)
         )
-        params.update(dsn_to_params(dsn))
+        params = dsn_to_params(dsn) | params
         self._client = client_class(self._session, **params)
 
     async def close(self):
