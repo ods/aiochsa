@@ -57,7 +57,7 @@ class Pool:
     def __init__(
         self, dsn, session_class=ClientSession,
         session_timeout: Optional[Union[float, int, dict]] = None,
-        client_class=Client, **params,
+        client_class=Client, **kwargs,
     ):
         timeout_params = self.DEFAULT_TIMEOUT.copy()
         if isinstance(session_timeout, dict):
@@ -67,7 +67,8 @@ class Pool:
         self._session = session_class(
             timeout=ClientTimeout(**timeout_params)
         )
-        params.update(dsn_to_params(dsn))
+        params = dsn_to_params(dsn)
+        params.update(kwargs)
         self._client = client_class(self._session, **params)
 
     async def close(self):
