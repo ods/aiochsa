@@ -1,5 +1,5 @@
 from typing import Optional, Union
-from urllib.parse import parse_qsl, urlsplit, urlunsplit
+from urllib.parse import parse_qsl, urlsplit, urlunsplit, unquote
 
 from aiohttp.client import ClientSession, ClientTimeout
 
@@ -14,13 +14,25 @@ def dsn_to_params(dsn):
             f'Expecting "clickhouse" scheme in DSN, got {parsed.scheme}'
         )
 
-    hostname = parsed.hostname or '127.0.0.1'
-    port = parsed.port or 8123
+    # Parts to unquote PCT-encoded are:
+    #   - host
+    #   - userinfo parts (username, password)
+    #   - path
+    # https://datatracker.ietf.org/doc/html/rfc3986
+
+    hostname = unquote(parsed.hostname) or '127.0.0.1'
+    port = int(parsed.port or 8123)
     netloc = f'{hostname}:{port}'
 
-    database = parsed.path.lstrip('/')
+    database = unquote(parsed.path).lstrip('/')
     if not database:
         database = 'default'
+
+    user = password = None
+    if parsed.username:
+        user = unquote(parsed.username)
+    if parsed.password:
+        password = unquote(parsed.password)
 
     params = dict(parse_qsl(parsed.query))
 
@@ -28,8 +40,8 @@ def dsn_to_params(dsn):
         **params,
         'url': urlunsplit(('http', netloc, '', '', '')),
         'database': database,
-        'user': parsed.username,
-        'password': parsed.password,
+        'user': user,
+        'password': password,
     }
 
 
@@ -45,7 +57,7 @@ class Pool:
     def __init__(
         self, dsn, session_class=ClientSession,
         session_timeout: Optional[Union[float, int, dict]] = None,
-        client_class=Client, **params,
+        client_class=Client, **kwargs,
     ):
         timeout_params = self.DEFAULT_TIMEOUT.copy()
         if isinstance(session_timeout, dict):
@@ -55,7 +67,8 @@ class Pool:
         self._session = session_class(
             timeout=ClientTimeout(**timeout_params)
         )
-        params.update(dsn_to_params(dsn))
+        params = dsn_to_params(dsn)
+        params.update(kwargs)
         self._client = client_class(self._session, **params)
 
     async def close(self):

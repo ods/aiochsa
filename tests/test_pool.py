@@ -26,6 +26,27 @@ def test_dsn_default_port():
     assert params['url'] == 'http://pet:8123'
 
 
+def test_dsn_quoted():
+    params = dsn_to_params('clickhouse://n%40me:6p_%2FD%21h@h%6Fst/db%5Fname')
+    assert params == {
+        'url': 'http://host:8123',
+        'database': 'db_name',
+        'user': 'n@me',
+        'password': '6p_/D!h',
+    }
+
+
+async def test_params_precedence():
+    async with create_pool(
+        'clickhouse://***:***@host/db', user='user', password='secret'
+    ) as pool:
+        assert pool._client.params == {
+            'database': 'db',
+            'user': 'user',
+            'password': 'secret',
+        }
+
+
 async def test_create_pool_close(dsn):
     pool = await create_pool(dsn)
     await pool.execute('SELECT 1')
