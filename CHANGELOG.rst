@@ -1,6 +1,13 @@
 Change Log
 ==========
 
+1.2.1 (2021-01-04)
+------------------
+
+* Fix handling of PCT-encoded parts in DSN
+* Fix Pool explicit parameters precedence over ones from DSN
+
+
 1.2.0 (2021-10-07)
 ------------------
 
