@@ -1,4 +1,3 @@
-import asyncio
 from datetime import datetime
 from decimal import Decimal
 import os
@@ -10,12 +9,6 @@ import sqlalchemy as sa
 import aiochsa
 from aiochsa import error_codes
 from aiochsa.dialect import ClickhouseSaDialect
-
-
-def pytest_collection_modifyitems(items):
-    for item in items:
-        if asyncio.iscoroutinefunction(item.function):
-            item.add_marker('asyncio')
 
 
 def pytest_addoption(parser):
