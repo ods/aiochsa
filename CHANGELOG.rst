@@ -1,7 +1,13 @@
 Change Log
 ==========
 
-1.2.1 (2021-01-04)
+1.2.2 (2022-02-21)
+------------------
+
+* Temporarily restrict SQLAlchemy version <1.4
+
+
+1.2.1 (2022-01-04)
 ------------------
 
 * Fix handling of PCT-encoded parts in DSN
